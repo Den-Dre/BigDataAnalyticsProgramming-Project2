@@ -40,7 +40,7 @@ public class GPSUtil {
     }
 
     /**
-     * Calculate the flat surface spherical distance between point 1 and point 2
+     * Calculate the flat surface spherical distance (in Kilometres?) between point 1 and point 2
      * Based on: https://en.wikipedia.org/wiki/Geographical_distance#Flat-surface_formulae
      *
      * @param lat1: The latitude of point1

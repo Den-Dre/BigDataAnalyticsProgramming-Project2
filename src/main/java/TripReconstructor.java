@@ -13,9 +13,11 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TimeZone;
 
 public class TripReconstructor {
 
@@ -36,37 +38,71 @@ public class TripReconstructor {
         @Override
         protected void reduce(Text key, Iterable<Text> values, Reducer<Text, Text, Text, Text>.Context context) throws IOException, InterruptedException {
             Text startOfTripRecord = new Text();
+            boolean tripActive = false;
             String[] parts;
-            final String Empty = "'E'";
-            final String Occupied = "'M'";
 
             for (Text trip : values) {
                 parts = trip.toString().split(",");
-                if (tripHasStarted(parts)) { // TODO also allow trip to start when first record is already M,M?
+                if (!tripActive && tripStartsNow(parts)) { // TODO also allow trip to start when first record is already M,M?
+                    tripActive = true;
                     startOfTripRecord.set(trip);
-                } else if (tripHasEnded(parts)) { // TODO don't make new Text objects (use Text.set?)
-                    context.write(new Text(startOfTripRecord.toString()), new Text(trip.toString()));
-                    getMapsURL(startOfTripRecord, trip);
+                } else if (tripActive && tripEndsNow(parts)) {
+                    tripActive = false;
+                    context.write(startOfTripRecord, trip);
+                    printGMapsURL(startOfTripRecord, trip);
+                }
+
+                // Check if one of the current trip's segments exceeds a speed of 200 km/h
+                if (tripActive) {
+                    boolean realisticSpeed = false;
+                    try {
+                        realisticSpeed = realisticSpeed(parts);
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                        tripActive = false;
+                    }
+                    if (!realisticSpeed) {
+                        tripActive = false;
+                    }
                 }
             }
         }
 
-        private boolean consecutiveTrips(Text t1, Text t2) { // If end date of t1 == start date of t2
-            return t1.toString().split(",")[5].equals(t2.toString().split(",")[1]);
-        }
-        private boolean tripHasStarted(String[] parts) {
+        private boolean tripStartsNow(String[] parts) {
             return parts[4].equals("'E'") && parts[8].equals("'M'");
         }
-        private boolean tripHasEnded(String[] parts) {
+
+        private boolean tripEndsNow(String[] parts) {
             return parts[4].equals("'M'") && parts[8].equals("'E'");
         }
-        private void getMapsURL(Text start, Text end) {
+
+        private void printGMapsURL(Text start, Text end) {
             final String baseURL = "https://www.google.com/maps/dir/";
-            final String startCoords = start.toString().split(",")[2] + "%2C" + start.toString().split(",")[3];
-            final String endCoords = end.toString().split(",")[2] + "%2C" + end.toString().split(",")[3];
-            String query = "?api=1&origin=" + startCoords + "&destination=" + endCoords;
+            final String startCoordinates = start.toString().split(",")[2] + "%2C" + start.toString().split(",")[3];
+            final String endCoordinates = end.toString().split(",")[2] + "%2C" + end.toString().split(",")[3];
+            String query = "?api=1&origin=" + startCoordinates + "&destination=" + endCoordinates;
             System.out.println(baseURL + query);
 //            return baseURL + URLEncoder.encode(query, StandardCharsets.UTF_8);
+        }
+
+        private boolean realisticSpeed(String[] parts) throws ParseException {
+            final double MAX_SPEED = 200.0;
+            final String DATE_FORMAT = "yyyyy-MM-dd hh:mm:ss";
+            DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+            TimeZone timeZone = TimeZone.getTimeZone("America/Los_Angeles");
+            dateFormat.setTimeZone(timeZone);
+
+            Date startDate = dateFormat.parse(parts[1].replace("'", ""));
+            Date endDate = dateFormat.parse(parts[5].replace("'", ""));
+            // endDate is always larger than or equal to startDate:
+            double deltaT = ((double) endDate.getTime() - startDate.getTime()) / (1000 * 3600);
+            double deltaX = GPSUtil.sphericalEarthDistance(
+                    Double.parseDouble(parts[2]),
+                    Double.parseDouble(parts[3]),
+                    Double.parseDouble(parts[6]),
+                    Double.parseDouble(parts[7])
+            );
+            return deltaX / deltaT < MAX_SPEED;
         }
     }
 
