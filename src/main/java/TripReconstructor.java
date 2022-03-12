@@ -13,6 +13,9 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 public class TripReconstructor {
 
@@ -32,32 +35,38 @@ public class TripReconstructor {
     public static class SegmentsReducer extends Reducer<Text, Text, Text, Text> {
         @Override
         protected void reduce(Text key, Iterable<Text> values, Reducer<Text, Text, Text, Text>.Context context) throws IOException, InterruptedException {
-            Text prevTrip = new Text();
-            Text startTrip = new Text();
-            boolean start = true;
+            Text startOfTripRecord = new Text();
+            String[] parts;
+            final String Empty = "'E'";
+            final String Occupied = "'M'";
 
-            System.out.println("VALUES:");
-//            values.forEach(System.out::println);
             for (Text trip : values) {
-                if (start) {
-                    prevTrip.set(trip.toString());
-                    startTrip.set(trip.toString());
-                    start = false;
-                    continue;
+                parts = trip.toString().split(",");
+                if (tripHasStarted(parts)) { // TODO also allow trip to start when first record is already M,M?
+                    startOfTripRecord.set(trip);
+                } else if (tripHasEnded(parts)) { // TODO don't make new Text objects (use Text.set?)
+                    context.write(new Text(startOfTripRecord.toString()), new Text(trip.toString()));
+                    getMapsURL(startOfTripRecord, trip);
                 }
-//                System.out.println("PAST");
-                if (!consecutiveTrips(prevTrip, trip)) {
-//                    System.out.println("NON CONSEC");
-                    context.write(new Text(startTrip.toString()), new Text(prevTrip.toString()));
-                    startTrip.set(trip);
-                }
-                prevTrip.set(trip);
             }
-            context.write(new Text(startTrip.toString()), new Text(prevTrip.toString()));
         }
 
         private boolean consecutiveTrips(Text t1, Text t2) { // If end date of t1 == start date of t2
             return t1.toString().split(",")[5].equals(t2.toString().split(",")[1]);
+        }
+        private boolean tripHasStarted(String[] parts) {
+            return parts[4].equals("'E'") && parts[8].equals("'M'");
+        }
+        private boolean tripHasEnded(String[] parts) {
+            return parts[4].equals("'M'") && parts[8].equals("'E'");
+        }
+        private void getMapsURL(Text start, Text end) {
+            final String baseURL = "https://www.google.com/maps/dir/";
+            final String startCoords = start.toString().split(",")[2] + "%2C" + start.toString().split(",")[3];
+            final String endCoords = end.toString().split(",")[2] + "%2C" + end.toString().split(",")[3];
+            String query = "?api=1&origin=" + startCoords + "&destination=" + endCoords;
+            System.out.println(baseURL + query);
+//            return baseURL + URLEncoder.encode(query, StandardCharsets.UTF_8);
         }
     }
 
@@ -73,8 +82,7 @@ public class TripReconstructor {
             int compare = split1[0].compareTo(split2[0]);
             if (compare != 0)
                 return compare;
-            else
-                return split1[1].compareTo(split2[1]);
+            return split1[1].compareTo(split2[1]);
         }
     }
 
