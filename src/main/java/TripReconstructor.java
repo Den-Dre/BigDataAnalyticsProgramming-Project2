@@ -10,31 +10,47 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.util.GenericOptionsParser;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.TimeZone;
+import java.util.*;
 
 public class TripReconstructor {
 
+    // Emits: <(TaxiID,StartDate), Record> Key value pairs
     public static class SegmentsMapper extends Mapper<Object, Text, Text, Text> {
+        private boolean printKeyValues;
+
+        @Override
+        protected void setup(Mapper<Object, Text, Text, Text>.Context context) {
+            Configuration conf = context.getConfiguration();
+            printKeyValues = conf.getBoolean("printKeyValues", true);
+        }
+
         @Override
         protected void map(Object key, Text value, Mapper<Object, Text, Text, Text>.Context context) throws IOException, InterruptedException {
             // We get as input one line of text and tokenize it into its separate parts
-            // Sort on id + start date
-            // Emits: <(TaxiID,StartDate), Record> Key value pairs
             String[] parts = value.toString().split(",");
             Text idDate = new Text(parts[0] + "," + parts[1]); // TaxiID,Start date
+            // Such that MR-framework will sort on id + start date
             context.write(idDate, value);
-//            System.out.println("MAP: " + idDate + ":" + value);
+            if (printKeyValues) System.out.println("MAP: " + idDate + " : " + value);
         }
     }
 
     public static class SegmentsReducer extends Reducer<Text, Text, Text, Text> {
+        private boolean printKeyValues;
+
+        @Override
+        protected void setup(Reducer<Text, Text, Text, Text>.Context context) {
+            Configuration conf = context.getConfiguration();
+            printKeyValues = conf.getBoolean("printKeyValues", true);
+        }
+
         @Override
         protected void reduce(Text key, Iterable<Text> values, Reducer<Text, Text, Text, Text>.Context context) throws IOException, InterruptedException {
             Text startOfTripRecord = new Text();
@@ -50,9 +66,11 @@ public class TripReconstructor {
                     tripActive = false;
                     context.write(startOfTripRecord, trip);
                     printGMapsURL(startOfTripRecord, trip);
+                    if (printKeyValues) System.out.println("REDUCE: " + startOfTripRecord  + " : " + trip);
                 }
 
                 // Check if one of the current trip's segments exceeds a speed of 200 km/h
+//                tripActive = checkSpeed(parts); // TODO use dedicated method below
                 if (tripActive) {
                     boolean realisticSpeed = false;
                     try {
@@ -82,7 +100,6 @@ public class TripReconstructor {
             final String endCoordinates = end.toString().split(",")[2] + "%2C" + end.toString().split(",")[3];
             String query = "?api=1&origin=" + startCoordinates + "&destination=" + endCoordinates;
             System.out.println(baseURL + query);
-//            return baseURL + URLEncoder.encode(query, StandardCharsets.UTF_8);
         }
 
         private boolean realisticSpeed(String[] parts) throws ParseException {
@@ -96,6 +113,8 @@ public class TripReconstructor {
             Date endDate = dateFormat.parse(parts[5].replace("'", ""));
             // endDate is always larger than or equal to startDate:
             double deltaT = ((double) endDate.getTime() - startDate.getTime()) / (1000 * 3600);
+//            if (deltaT == 0) // TODO decide what to do when times are equal
+//                return false;
             double deltaX = GPSUtil.sphericalEarthDistance(
                     Double.parseDouble(parts[2]),
                     Double.parseDouble(parts[3]),
@@ -104,8 +123,20 @@ public class TripReconstructor {
             );
             return deltaX / deltaT < MAX_SPEED;
         }
+
+        private boolean checkSpeed(String[] parts) {
+            boolean realisticSpeed;
+            try {
+                realisticSpeed = realisticSpeed(parts);
+            } catch (ParseException e) {
+                e.printStackTrace();
+                return false;
+            }
+            return realisticSpeed;
+        }
     }
 
+    // Based on: https://vangjee.wordpress.com/2012/03/20/secondary-sorting-aka-sorting-values-in-hadoops-mapreduce-programming-paradigm/
     public static class IDDateComparator extends WritableComparator {
         public IDDateComparator() {
             super(Text.class, true);
@@ -122,6 +153,7 @@ public class TripReconstructor {
         }
     }
 
+    // Based on: https://vangjee.wordpress.com/2012/03/20/secondary-sorting-aka-sorting-values-in-hadoops-mapreduce-programming-paradigm/
     public static class TaxiIDGroupingComparator extends WritableComparator {
         protected TaxiIDGroupingComparator() {
             super(Text.class, true);
@@ -134,8 +166,6 @@ public class TripReconstructor {
             return id1.compareTo(id2);
         }
     }
-
-
 
     public static class IDPartitioner extends Partitioner<Text, Text> {
 
@@ -159,9 +189,11 @@ public class TripReconstructor {
 
     public static void main(String[] args) throws Exception {
         FileUtils.deleteDirectory(new File("../../../output"));
-//        BasicConfigurator.configure();
-
         Configuration conf = new Configuration();
+        GenericOptionsParser optionParser = new GenericOptionsParser(conf, args);
+        String[] remainingArgs = optionParser.getRemainingArgs();
+        List<String> otherArgs = new ArrayList<>(Arrays.asList(remainingArgs));
+
         Job job = Job.getInstance(conf, "Trip reconstruction");
         job.setJarByClass(TripReconstructor.class);
         job.setMapperClass(SegmentsMapper.class);
@@ -170,15 +202,13 @@ public class TripReconstructor {
         job.setPartitionerClass(IDPartitioner.class);
         job.setGroupingComparatorClass(TaxiIDGroupingComparator.class);
         job.setSortComparatorClass(IDDateComparator.class);
-        job.setNumReduceTasks(1);
-//        job.setMapOutputKeyClass(Text.class);
-//        job.setMapOutputValueClass(Text.class);
+//        job.setNumReduceTasks(1);
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
-//        job.setOutputKeyClass(Text.class);
-//        job.setOutputValueClass(IntWritable.class);
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        FileInputFormat.addInputPath(job, new Path(otherArgs.get(0)));
+        FileOutputFormat.setOutputPath(job, new Path(otherArgs.get(1)));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 }
