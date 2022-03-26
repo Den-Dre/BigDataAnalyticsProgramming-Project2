@@ -1,3 +1,4 @@
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
@@ -9,7 +10,6 @@ import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.util.GenericOptionsParser;
 
 import java.io.File;
@@ -22,21 +22,23 @@ import java.util.*;
 public class TripReconstructor {
 
     // Emits: <(TaxiID,StartDate), Record> Key value pairs
+    // TODO optimise this: maybe we can get away with writing only a part of the record as value?
     public static class SegmentsMapper extends Mapper<Object, Text, Text, Text> {
         private boolean printKeyValues;
 
         @Override
         protected void setup(Mapper<Object, Text, Text, Text>.Context context) {
             Configuration conf = context.getConfiguration();
-            printKeyValues = conf.getBoolean("printKeyValues", true);
+            printKeyValues = conf.getBoolean("printKeyValues", false);
         }
 
         @Override
         protected void map(Object key, Text value, Mapper<Object, Text, Text, Text>.Context context) throws IOException, InterruptedException {
             // We get as input one line of text and tokenize it into its separate parts
             String[] parts = value.toString().split(",");
-            Text idDate = new Text(parts[0] + "," + parts[1]); // TaxiID,Start date
-            // Such that MR-framework will sort on id + start date
+            // We create a composite key based on the TaxiID + Start Date
+            // This composite key is used in the group comparator, key comparator and partitioner defined below
+            Text idDate = new Text(parts[0] + "," + parts[1]);
             context.write(idDate, value);
             if (printKeyValues) System.out.println("MAP: " + idDate + " : " + value);
         }
@@ -48,52 +50,111 @@ public class TripReconstructor {
         @Override
         protected void setup(Reducer<Text, Text, Text, Text>.Context context) {
             Configuration conf = context.getConfiguration();
-            printKeyValues = conf.getBoolean("printKeyValues", true);
+            printKeyValues = conf.getBoolean("printKeyValues", false);
         }
 
         @Override
         protected void reduce(Text key, Iterable<Text> values, Reducer<Text, Text, Text, Text>.Context context) throws IOException, InterruptedException {
             Text startOfTripRecord = new Text();
+            Text value = new Text();
+
+            double tripDistance = 0;
+            boolean airportTrip = false;
             boolean tripActive = false;
+            boolean skippedPrevRecord = false;
+
             String[] parts;
+            String[] prevParts = new String[0];
+            String[] tempParts;
+            StringBuilder coordinates = new StringBuilder();
 
             for (Text trip : values) {
-                parts = trip.toString().split(",");
-                if (!tripActive && tripStartsNow(parts)) { // TODO also allow trip to start when first record is already M,M?
-                    tripActive = true;
-                    startOfTripRecord.set(trip);
-                } else if (tripActive && tripEndsNow(parts)) {
-                    tripActive = false;
-                    context.write(startOfTripRecord, trip);
-                    printGMapsURL(startOfTripRecord, trip);
-                    if (printKeyValues) System.out.println("REDUCE: " + startOfTripRecord  + " : " + trip);
-                }
+                tempParts = trip.toString().split(",");
 
-                // Check if one of the current trip's segments exceeds a speed of 200 km/h
-//                tripActive = checkSpeed(parts); // TODO use dedicated method below
-                if (tripActive) {
-                    boolean realisticSpeed = false;
-                    try {
-                        realisticSpeed = realisticSpeed(parts);
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                        tripActive = false;
+                // Skip incomplete records
+                if (tempParts.length != 9)
+                    continue;
+//                if (!skippedPrevRecord)
+//                    prevParts = parts;
+//                skippedPrevRecord = false;
+                parts = tempParts;
+
+                try {
+                    if (tripActive) {
+                        // We consider a trip as an airport trip if at least one of its GPS locations is within a 1km range of the airport
+                        airportTrip = airportTrip || isAirportTrip(parts[2], parts[3]);
+                        tripDistance += GPSUtil.sphericalEarthDistance(
+                                parts[2],
+                                parts[3],
+                                parts[6],
+                                parts[7]
+                        );
+                        coordinates.append(parts[2]).append(",").append(parts[3]).append(" ");
                     }
-                    if (!realisticSpeed) {
+                    // Start measuring a new trip if the Taxi's state changes from E (empty) to M (occupied)
+                    // TODO also allow trip to start when first record is already M,M?
+                    if (!tripActive && tripStartsNow(parts)) {
+                        tripActive = true;
+                        startOfTripRecord.set(trip);
+                        coordinates.append(parts[2]).append(",").append(parts[3]).append(" ");
+                    } else if (tripActive && tripEndsNow(parts)) {
                         tripActive = false;
+                        if (airportTrip) {
+                            // TODO: fix this: the calculated fees are way too high
+                            value.set(trip + /*" - " + tripDistance + */ " - " + calculateFee(tripDistance) + " ; " + tripDistance + " - " + coordinates );
+                            context.write(startOfTripRecord, value);
+                            airportTrip = false;
+                        }
+                        // TODO do we need to process trips that are not airport trips?
+//                    else {
+//                        context.write(startOfTripRecord, trip);
+//                    }
+//                    printGMapsURL(startOfTripRecord, trip);
+                        tripDistance = 0;
+                        if (printKeyValues) System.out.println("REDUCE: " + startOfTripRecord + " : " + trip);
                     }
+                    if (tripActive) {
+                        // Check if one of the current trip's segments exceeds a speed of 200 km/h
+                        tripActive = checkSpeed(parts);
+                        if (!tripActive) {
+                            airportTrip = false;
+                            tripDistance = 0.0;
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Parse exception in record: " + trip);
+//                    skippedPrevRecord = true;
                 }
             }
+
         }
 
+        // Check whether the given coordinates are within a range of 1km of the airport coordinates
+        private boolean isAirportTrip(String latitude, String longitude) {
+            final String latAirport = String.valueOf(37.62131);
+            final String longAirport = String.valueOf(-122.37896);
+            double distanceInKilometers = GPSUtil.sphericalEarthDistance(latAirport, longAirport, latitude, longitude);
+            return distanceInKilometers <= 1;
+        }
+
+        // Calculate the fee based on the distance traveled and according to the given formula
+        private String calculateFee(double distance) {
+            return String.valueOf(3.25 + distance * 1.79);
+        }
+
+        // A trip starts as soon as we've encountered a record which switches the state from the texi form
+        // Empty (E) to Occupied (M)
         private boolean tripStartsNow(String[] parts) {
             return parts[4].equals("'E'") && parts[8].equals("'M'");
         }
 
+        // A trip ends as soon as we've encountered a record which switches the state from the texi form
+        // Occupied (M) to Empty (E)
         private boolean tripEndsNow(String[] parts) {
             return parts[4].equals("'M'") && parts[8].equals("'E'");
         }
 
+        // A utility method to construct the Google Maps API URL between two given coordinates
         private void printGMapsURL(Text start, Text end) {
             final String baseURL = "https://www.google.com/maps/dir/";
             final String startCoordinates = start.toString().split(",")[2] + "%2C" + start.toString().split(",")[3];
@@ -102,6 +163,8 @@ public class TripReconstructor {
             System.out.println(baseURL + query);
         }
 
+        // Check whether the speed at which the taxi traveled between the start and end point
+        // of this record is realistic (i.e. < 200 km/h)
         private boolean realisticSpeed(String[] parts) throws ParseException {
             final double MAX_SPEED = 200.0;
             final String DATE_FORMAT = "yyyyy-MM-dd hh:mm:ss";
@@ -116,14 +179,15 @@ public class TripReconstructor {
 //            if (deltaT == 0) // TODO decide what to do when times are equal
 //                return false;
             double deltaX = GPSUtil.sphericalEarthDistance(
-                    Double.parseDouble(parts[2]),
-                    Double.parseDouble(parts[3]),
-                    Double.parseDouble(parts[6]),
-                    Double.parseDouble(parts[7])
+                    parts[2],
+                    parts[3],
+                    parts[6],
+                    parts[7]
             );
             return deltaX / deltaT < MAX_SPEED;
         }
 
+        // TODO replace or improve this method
         private boolean checkSpeed(String[] parts) {
             boolean realisticSpeed;
             try {
@@ -137,8 +201,10 @@ public class TripReconstructor {
     }
 
     // Based on: https://vangjee.wordpress.com/2012/03/20/secondary-sorting-aka-sorting-values-in-hadoops-mapreduce-programming-paradigm/
-    public static class IDDateComparator extends WritableComparator {
-        public IDDateComparator() {
+    // This comparator is responsible for the sorting of the keys.
+    // We first sort on the TaxiID, and if these are equal, we sort on the Start Date
+    public static class IDDateSortComparator extends WritableComparator {
+        public IDDateSortComparator() {
             super(Text.class, true);
         }
 
@@ -154,6 +220,8 @@ public class TripReconstructor {
     }
 
     // Based on: https://vangjee.wordpress.com/2012/03/20/secondary-sorting-aka-sorting-values-in-hadoops-mapreduce-programming-paradigm/
+    // This grouping comparator is responsible for grouping the values into an iterators, which the reduce method receives.
+    // We choose to group values based on TaxiID
     public static class TaxiIDGroupingComparator extends WritableComparator {
         protected TaxiIDGroupingComparator() {
             super(Text.class, true);
@@ -182,8 +250,11 @@ public class TripReconstructor {
          */
         @Override
         public int getPartition(Text text, Text text2, int numPartitions) {
-            System.out.println("PARTITION: " + Integer.parseInt(text.toString().split(",")[0]) % numPartitions);
-            return Integer.parseInt(text.toString().split(",")[0]) % numPartitions;
+            // Partition based on the TaxiID: send every record of the same taxi to the same reducer
+            int chosenPartition = text.toString().split(",")[0].hashCode() % numPartitions;
+            System.out.println("text: " + text + " text2: " + text2);
+            System.out.println("Num Partitions: " + numPartitions + ", chose partition: " + chosenPartition);
+            return chosenPartition;
         }
     }
 
@@ -201,8 +272,8 @@ public class TripReconstructor {
         job.setReducerClass(SegmentsReducer.class);
         job.setPartitionerClass(IDPartitioner.class);
         job.setGroupingComparatorClass(TaxiIDGroupingComparator.class);
-        job.setSortComparatorClass(IDDateComparator.class);
-//        job.setNumReduceTasks(1);
+        job.setSortComparatorClass(IDDateSortComparator.class);
+//        job.setNumReduceTasks(10); // TODO decide on the number of tasks: maybe 9 as there are 9 nodes in the DFS?
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);

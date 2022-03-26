@@ -30,26 +30,27 @@ public class GPSUtil {
         // The parameter line has the following format:
         // <taxi-id> <start date> <start pos (lat)> <start pos (long)> <end date> <end pos (lat)> <end pos (long)>
         String[] split = line.split(" ");
-        double lat1,  long1, lat2, long2;
-        lat1 = Double.parseDouble(split[2]);
-        long1 = Double.parseDouble(split[3]);
-        lat2 = Double.parseDouble(split[5]);
-        long2 = Double.parseDouble(split[6]);
-
-        return sphericalEarthDistance(lat1, long1, lat2, long2);
+        return sphericalEarthDistance(split[2], split[3], split[5], split[6]);
     }
 
     /**
-     * Calculate the flat surface spherical distance (in Kilometres?) between point 1 and point 2
+     * Calculate the flat surface spherical distance in kilometres between point 1 and point 2
+     *
      * Based on: https://en.wikipedia.org/wiki/Geographical_distance#Flat-surface_formulae
      *
-     * @param lat1: The latitude of point1
-     * @param long1: the longitude of point1
-     * @param lat2: the latitude of point2
-     * @param long2: the longitude of point2
-     * @return: the spherical distance between point1 and point2
+     * @param lat1Str: The latitude of point1 in String representation
+     * @param long1Str: the longitude of point1 in String representation
+     * @param lat2Str: the latitude of point2 in String representation
+     * @param long2Str: the longitude of point2 in String representation
+     * @return the spherical distance in kilometers between point1 and point2
      */
-    protected static double sphericalEarthDistance(double lat1, double long1, double lat2, double long2) {
+    protected static double sphericalEarthDistance(String lat1Str, String long1Str, String lat2Str, String long2Str)
+            throws NumberFormatException {
+        double lat1 = Double.parseDouble(lat1Str);
+        double long1 = Double.parseDouble(long1Str);
+        double lat2 = Double.parseDouble(lat2Str);
+        double long2 = Double.parseDouble(long2Str);
+
         // Radius of the earth in kilometres
         final double R = 6371.009;
 

@@ -7,6 +7,7 @@ import org.apache.spark.sql.*;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class SparkDistances {
@@ -56,13 +57,19 @@ public class SparkDistances {
 
     private static List<Double> getDistances(JavaRDD<Row> data) {
         JavaRDD<Double> mapping = data.map((Function<Row, Double>) row -> {
-            double lat1,  long1, lat2, long2;
-            lat1 = Double.parseDouble(row.getString(2));
-            long1 = Double.parseDouble(row.getString(3));
-            lat2 = Double.parseDouble(row.getString(5));
-            long2 = Double.parseDouble(row.getString(6));
-            return GPSUtil.sphericalEarthDistance(lat1, long1, lat2, long2);
-        });
+            // TODO find a suitable way to handle possibly malformed records
+                    try {
+                        return GPSUtil.sphericalEarthDistance(
+                                row.getString(2),
+                                row.getString(3),
+                                row.getString(5),
+                                row.getString(6)
+                        );
+                    } catch (NumberFormatException e) {
+                        return -1.0;
+                    }
+                }
+        );
 
         return mapping.collect();
     }
