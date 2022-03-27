@@ -12,7 +12,9 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -44,13 +46,22 @@ public class TripReconstructor {
         }
     }
 
+    // TODO use a combiner?
+
     public static class SegmentsReducer extends Reducer<Text, Text, Text, Text> {
         private boolean printKeyValues;
+        private boolean printTooFastTrips;
+        private BufferedWriter malformedWriter;
+        private BufferedWriter tooFastWriter;
 
         @Override
-        protected void setup(Reducer<Text, Text, Text, Text>.Context context) {
+        protected void setup(Reducer<Text, Text, Text, Text>.Context context) throws IOException {
             Configuration conf = context.getConfiguration();
             printKeyValues = conf.getBoolean("printKeyValues", false);
+            printTooFastTrips = conf.getBoolean("printTooFastTrips", false);
+
+            malformedWriter = new BufferedWriter(new FileWriter("../../../data/malformedRecords"));
+            tooFastWriter = new BufferedWriter(new FileWriter("../../../data/tooFastRecords"));
         }
 
         @Override
@@ -61,10 +72,8 @@ public class TripReconstructor {
             double tripDistance = 0;
             boolean airportTrip = false;
             boolean tripActive = false;
-            boolean skippedPrevRecord = false;
 
             String[] parts;
-            String[] prevParts = new String[0];
             String[] tempParts;
             StringBuilder coordinates = new StringBuilder();
 
@@ -74,9 +83,6 @@ public class TripReconstructor {
                 // Skip incomplete records
                 if (tempParts.length != 9)
                     continue;
-//                if (!skippedPrevRecord)
-//                    prevParts = parts;
-//                skippedPrevRecord = false;
                 parts = tempParts;
 
                 try {
@@ -91,6 +97,7 @@ public class TripReconstructor {
                         );
                         coordinates.append(parts[2]).append(",").append(parts[3]).append(" ");
                     }
+
                     // Start measuring a new trip if the Taxi's state changes from E (empty) to M (occupied)
                     // TODO also allow trip to start when first record is already M,M?
                     if (!tripActive && tripStartsNow(parts)) {
@@ -98,10 +105,13 @@ public class TripReconstructor {
                         startOfTripRecord.set(trip);
                         coordinates.append(parts[2]).append(",").append(parts[3]).append(" ");
                     } else if (tripActive && tripEndsNow(parts)) {
-                        tripActive = false;
                         if (airportTrip) {
-                            // TODO: fix this: the calculated fees are way too high
-                            value.set(trip + /*" - " + tripDistance + */ " - " + calculateFee(tripDistance) + " ; " + tripDistance + " - " + coordinates );
+                            value.set(
+                                    trip + " - "
+                                    + calculateFee(tripDistance) + " ; "
+                                    + tripDistance
+                                    + (printTooFastTrips ? " - " + coordinates : "")
+                            );
                             context.write(startOfTripRecord, value);
                             airportTrip = false;
                         }
@@ -110,20 +120,21 @@ public class TripReconstructor {
 //                        context.write(startOfTripRecord, trip);
 //                    }
 //                    printGMapsURL(startOfTripRecord, trip);
+                        tripActive = false;
                         tripDistance = 0;
                         if (printKeyValues) System.out.println("REDUCE: " + startOfTripRecord + " : " + trip);
                     }
-                    if (tripActive) {
-                        // Check if one of the current trip's segments exceeds a speed of 200 km/h
-                        tripActive = checkSpeed(parts);
-                        if (!tripActive) {
-                            airportTrip = false;
-                            tripDistance = 0.0;
-                        }
+
+                    // Check if one of the current trip's segments exceeds a speed of 200 km/h
+                    if (tripActive && !realisticSpeed(parts)) {
+                        tripActive = false;
+                        airportTrip = false;
+                        tripDistance = 0.0;
+                        tooFastWriter.append(trip.toString()).append("\n");
                     }
                 } catch (NumberFormatException e) {
                     System.out.println("Parse exception in record: " + trip);
-//                    skippedPrevRecord = true;
+                    malformedWriter.append(trip.toString()).append("\n");
                 }
             }
 
@@ -165,19 +176,28 @@ public class TripReconstructor {
 
         // Check whether the speed at which the taxi traveled between the start and end point
         // of this record is realistic (i.e. < 200 km/h)
-        private boolean realisticSpeed(String[] parts) throws ParseException {
+        private boolean realisticSpeed(String[] parts) {
             final double MAX_SPEED = 200.0;
             final String DATE_FORMAT = "yyyyy-MM-dd hh:mm:ss";
             DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
             TimeZone timeZone = TimeZone.getTimeZone("America/Los_Angeles");
             dateFormat.setTimeZone(timeZone);
+            Date startDate;
+            Date endDate;
 
-            Date startDate = dateFormat.parse(parts[1].replace("'", ""));
-            Date endDate = dateFormat.parse(parts[5].replace("'", ""));
+            try {
+                startDate = dateFormat.parse(parts[1].replace("'", ""));
+                endDate = dateFormat.parse(parts[5].replace("'", ""));
+            } catch (ParseException e) {
+                // If we can't parse the records, they must be malformed.
+                // Thus, we see this as an invalid speed
+                return false;
+            }
+
             // endDate is always larger than or equal to startDate:
             double deltaT = ((double) endDate.getTime() - startDate.getTime()) / (1000 * 3600);
-//            if (deltaT == 0) // TODO decide what to do when times are equal
-//                return false;
+            if (deltaT == 0) // TODO decide what to do when times are equal
+                return false;
             double deltaX = GPSUtil.sphericalEarthDistance(
                     parts[2],
                     parts[3],
@@ -185,18 +205,6 @@ public class TripReconstructor {
                     parts[7]
             );
             return deltaX / deltaT < MAX_SPEED;
-        }
-
-        // TODO replace or improve this method
-        private boolean checkSpeed(String[] parts) {
-            boolean realisticSpeed;
-            try {
-                realisticSpeed = realisticSpeed(parts);
-            } catch (ParseException e) {
-                e.printStackTrace();
-                return false;
-            }
-            return realisticSpeed;
         }
     }
 
