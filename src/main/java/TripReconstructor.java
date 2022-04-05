@@ -28,6 +28,9 @@ public class TripReconstructor {
     // TODO optimise this: maybe we can get away with writing only a part of the record as value?
     public static class SegmentsMapper extends Mapper<Object, Text, Text, Text> {
         private boolean printKeyValues;
+        // Create only one Text object, rather than creating a new one in every map call
+        private final Text idDate = new Text();
+        private String[] parts;
 
         @Override
         protected void setup(Mapper<Object, Text, Text, Text>.Context context) {
@@ -38,12 +41,21 @@ public class TripReconstructor {
         @Override
         protected void map(Object key, Text value, Mapper<Object, Text, Text, Text>.Context context) throws IOException, InterruptedException {
             // We get as input one line of text and tokenize it into its separate parts
-            String[] parts = value.toString().split(",");
+            parts = value.toString().split(",");
+            // E,E segments are of no use to reconstruct trips:
+            // We don't send these over the network to limit network delay
+            if (emptySegment(parts))
+                return;
             // We create a composite key based on the TaxiID + Start Date
             // This composite key is used in the group comparator, key comparator and partitioner defined below
-            Text idDate = new Text(parts[0] + "," + parts[1]);
+            idDate.set(parts[0] + "," + parts[1]);
             context.write(idDate, value);
             if (printKeyValues) System.out.println("MAP: " + idDate + " : " + value);
+        }
+
+        // Detect whether a segment doesn't contain any passengers at its start location, nor at its end location
+        private boolean emptySegment(String[] parts) {
+            return parts[4].equals("'E'") && parts[8].equals("'E'");
         }
     }
 
