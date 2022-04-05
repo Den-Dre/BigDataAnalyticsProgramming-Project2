@@ -63,7 +63,7 @@ public class TripReconstructor {
 
         String[] parts;
         String[] tempParts;
-        StringBuilder coordinates = new StringBuilder();
+//        StringBuilder coordinates = new StringBuilder();
         String tripString;
 
         @Override
@@ -99,14 +99,16 @@ public class TripReconstructor {
                 try {
                     if (tripActive) {
                         // We consider a trip as an airport trip if at least one of its GPS locations is within a 1km range of the airport
-                        airportTrip = airportTrip || isAirportTrip(parts[2], parts[3]);
+                        if (!airportTrip)
+                            airportTrip = isAirportTrip(parts[2], parts[3]);
+//                        airportTrip = airportTrip || isAirportTrip(parts[2], parts[3]);
                         tripDistance += GPSUtil.sphericalEarthDistance(
                                 parts[2],
                                 parts[3],
                                 parts[6],
                                 parts[7]
                         );
-                        coordinates.append(parts[2]).append(",").append(parts[3]).append(" ");
+//                        coordinates.append(parts[2]).append(",").append(parts[3]).append(" ");
                     }
 
                     // Start measuring a new trip if the Taxi's state changes from E (empty) to M (occupied)
@@ -114,14 +116,14 @@ public class TripReconstructor {
                     if (!tripActive && tripStartsNow(parts)) {
                         tripActive = true;
                         startOfTripRecord.set(trip);
-                        coordinates.append(parts[2]).append(",").append(parts[3]).append(" ");
+//                        coordinates.append(parts[2]).append(",").append(parts[3]).append(" ");
                     } else if (tripActive && tripEndsNow(parts)) {
                         if (airportTrip) {
                             value.set(
                                     trip + " - "
                                     + calculateFee(tripDistance) + " ; "
                                     + tripDistance
-                                    + (printTooFastTrips ? " - " + coordinates : "")
+//                                    + (printTooFastTrips ? " - " + coordinates : "")
                             );
                             context.write(startOfTripRecord, value);
                             airportTrip = false;
@@ -136,6 +138,7 @@ public class TripReconstructor {
                         if (printKeyValues) System.out.println("REDUCE: " + startOfTripRecord + " : " + trip);
                     }
 
+                    // We're still in a trip:
                     // Check if one of the current trip's segments exceeds a speed of 200 km/h
                     if (tripActive && !realisticSpeed(parts)) {
                         tripActive = false;
