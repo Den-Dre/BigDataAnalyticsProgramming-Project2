@@ -4,4 +4,5 @@
 /usr/lib/jvm/java-8-openjdk-amd64/bin/jar cf TripReconstructor.jar *.class
 hdfs dfs -rm -r output
 # hdfs dfs -put TripReconstructor.jar /user/r0760777/src
-hadoop jar TripReconstructor.jar TripReconstructor /user/r0760777/data/2010_03.segments output
+# hadoop --loglevel DEBUG jar TripReconstructor.jar TripReconstructor /data/all.segments output
+hadoop jar TripReconstructor.jar TripReconstructor /data/all.segments output

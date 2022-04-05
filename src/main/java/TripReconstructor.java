@@ -15,9 +15,7 @@ import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -54,9 +52,7 @@ public class TripReconstructor {
     public static class SegmentsReducer extends Reducer<Text, Text, Text, Text> {
         private boolean printKeyValues;
         private boolean printTooFastTrips;
-//        private BufferedWriter malformedWriter;
-//        private BufferedWriter tooFastWriter;
-        private Logger logger = LoggerFactory.getLogger(SegmentsReducer.class);
+        private final Logger logger = LoggerFactory.getLogger(SegmentsReducer.class);
 
         Text startOfTripRecord = new Text();
         Text value = new Text();
@@ -71,14 +67,14 @@ public class TripReconstructor {
         String tripString;
 
         @Override
-        protected void setup(Reducer<Text, Text, Text, Text>.Context context) throws IOException {
+        protected void setup(Reducer<Text, Text, Text, Text>.Context context) {
             Configuration conf = context.getConfiguration();
             printKeyValues = conf.getBoolean("printKeyValues", false);
             printTooFastTrips = conf.getBoolean("printTooFastTrips", false);
         }
 
         @Override
-        protected void reduce(Text key, Iterable<Text> values, Reducer<Text, Text, Text, Text>.Context context) throws IOException, InterruptedException {
+        protected void reduce(Text key, Iterable<Text> values, Reducer<Text, Text, Text, Text>.Context context) {
             for (Text trip : values) {
 
                 tripString = trip.toString();
@@ -275,17 +271,18 @@ public class TripReconstructor {
         public int getPartition(Text text, Text text2, int numPartitions) {
             // Partition based on the TaxiID: send every record of the same taxi to the same reducer
             int chosenPartition = text.toString().split(",")[0].hashCode() % numPartitions;
-            System.out.println("text: " + text + " text2: " + text2);
-            System.out.println("Num Partitions: " + numPartitions + ", chose partition: " + chosenPartition);
+            // System.out.println("text: " + text + " text2: " + text2);
+            // System.out.println("Num Partitions: " + numPartitions + ", chose partition: " + chosenPartition);
             return chosenPartition;
         }
     }
 
     public static void main(String[] args) throws Exception {
-        BasicConfigurator.configure();
+	// Initialise log4j
+	//BasicConfigurator.configure();
 
         FileUtils.deleteDirectory(new File("../../../output"));
-//        Configuration conf = new Configuration();
+        Configuration conf = new Configuration();
         GenericOptionsParser optionParser = new GenericOptionsParser(conf, args);
         String[] remainingArgs = optionParser.getRemainingArgs();
         List<String> otherArgs = new ArrayList<>(Arrays.asList(remainingArgs));
