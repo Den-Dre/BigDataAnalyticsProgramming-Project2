@@ -24,3 +24,6 @@ hs_err_pid*
 
 # data takes up too much space for git
 data/
+
+# Output also takes up too much space
+output/

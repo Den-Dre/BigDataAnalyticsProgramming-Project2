@@ -11,6 +11,9 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.log4j.BasicConfigurator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -51,38 +54,50 @@ public class TripReconstructor {
     public static class SegmentsReducer extends Reducer<Text, Text, Text, Text> {
         private boolean printKeyValues;
         private boolean printTooFastTrips;
-        private BufferedWriter malformedWriter;
-        private BufferedWriter tooFastWriter;
+//        private BufferedWriter malformedWriter;
+//        private BufferedWriter tooFastWriter;
+        private Logger logger = LoggerFactory.getLogger(SegmentsReducer.class);
+
+        Text startOfTripRecord = new Text();
+        Text value = new Text();
+
+        double tripDistance = 0;
+        boolean airportTrip = false;
+        boolean tripActive = false;
+
+        String[] parts;
+        String[] tempParts;
+        StringBuilder coordinates = new StringBuilder();
+        String tripString;
 
         @Override
         protected void setup(Reducer<Text, Text, Text, Text>.Context context) throws IOException {
             Configuration conf = context.getConfiguration();
             printKeyValues = conf.getBoolean("printKeyValues", false);
             printTooFastTrips = conf.getBoolean("printTooFastTrips", false);
-
-            malformedWriter = new BufferedWriter(new FileWriter("../../../data/malformedRecords"));
-            tooFastWriter = new BufferedWriter(new FileWriter("../../../data/tooFastRecords"));
         }
 
         @Override
         protected void reduce(Text key, Iterable<Text> values, Reducer<Text, Text, Text, Text>.Context context) throws IOException, InterruptedException {
-            Text startOfTripRecord = new Text();
-            Text value = new Text();
-
-            double tripDistance = 0;
-            boolean airportTrip = false;
-            boolean tripActive = false;
-
-            String[] parts;
-            String[] tempParts;
-            StringBuilder coordinates = new StringBuilder();
-
             for (Text trip : values) {
-                tempParts = trip.toString().split(",");
+
+                tripString = trip.toString();
+                if (tripString.contains("NULL")) {
+                    // TODO should trips that contain incomplete records still be considered valid?
+//                    tripActive = false;
+                    continue;
+                }
+
+                // Defer splitting of a record to when it's absolutely necessary
+                // (i.e. when the test above is false)
+                tempParts = tripString.split(",");
 
                 // Skip incomplete records
-                if (tempParts.length != 9)
+                if (tempParts.length != 9) {
+                    // TODO should trips that contain incomplete records still be considered valid?
+//                    tripActive = false;
                     continue;
+                }
                 parts = tempParts;
 
                 try {
@@ -130,11 +145,11 @@ public class TripReconstructor {
                         tripActive = false;
                         airportTrip = false;
                         tripDistance = 0.0;
-                        tooFastWriter.append(trip.toString()).append("\n");
+                        logger.info("Record with excessive speed: " + trip);
                     }
-                } catch (NumberFormatException e) {
-                    System.out.println("Parse exception in record: " + trip);
-                    malformedWriter.append(trip.toString()).append("\n");
+                } catch (Exception e) {
+                    System.out.println("(Parse) exception: " + e +  " in record: " + trip);
+                    logger.info("Malformed record: " + trip);
                 }
             }
 
@@ -267,8 +282,10 @@ public class TripReconstructor {
     }
 
     public static void main(String[] args) throws Exception {
+        BasicConfigurator.configure();
+
         FileUtils.deleteDirectory(new File("../../../output"));
-        Configuration conf = new Configuration();
+//        Configuration conf = new Configuration();
         GenericOptionsParser optionParser = new GenericOptionsParser(conf, args);
         String[] remainingArgs = optionParser.getRemainingArgs();
         List<String> otherArgs = new ArrayList<>(Arrays.asList(remainingArgs));
@@ -281,7 +298,7 @@ public class TripReconstructor {
         job.setPartitionerClass(IDPartitioner.class);
         job.setGroupingComparatorClass(TaxiIDGroupingComparator.class);
         job.setSortComparatorClass(IDDateSortComparator.class);
-//        job.setNumReduceTasks(10); // TODO decide on the number of tasks: maybe 9 as there are 9 nodes in the DFS?
+        job.setNumReduceTasks(10); // TODO decide on the number of tasks: maybe 10 as there are 10 nodes in the DFS?
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
