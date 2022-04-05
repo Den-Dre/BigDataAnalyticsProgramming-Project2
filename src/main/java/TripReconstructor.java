@@ -11,6 +11,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.log4j.BasicConfigurator;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -51,8 +52,8 @@ public class TripReconstructor {
     public static class SegmentsReducer extends Reducer<Text, Text, Text, Text> {
         private boolean printKeyValues;
         private boolean printTooFastTrips;
-        private BufferedWriter malformedWriter;
-        private BufferedWriter tooFastWriter;
+        // private BufferedWriter malformedWriter;
+        // private BufferedWriter tooFastWriter;
 
         @Override
         protected void setup(Reducer<Text, Text, Text, Text>.Context context) throws IOException {
@@ -60,8 +61,8 @@ public class TripReconstructor {
             printKeyValues = conf.getBoolean("printKeyValues", false);
             printTooFastTrips = conf.getBoolean("printTooFastTrips", false);
 
-            malformedWriter = new BufferedWriter(new FileWriter("../../../data/malformedRecords"));
-            tooFastWriter = new BufferedWriter(new FileWriter("../../../data/tooFastRecords"));
+            // malformedWriter = new BufferedWriter(new FileWriter("../../../data/malformedRecords"));
+            // tooFastWriter = new BufferedWriter(new FileWriter("../../../data/tooFastRecords"));
         }
 
         @Override
@@ -77,6 +78,7 @@ public class TripReconstructor {
             String[] tempParts;
             StringBuilder coordinates = new StringBuilder();
 
+	    //System.out.println("Entered Reducer");
             for (Text trip : values) {
                 tempParts = trip.toString().split(",");
 
@@ -130,11 +132,11 @@ public class TripReconstructor {
                         tripActive = false;
                         airportTrip = false;
                         tripDistance = 0.0;
-                        tooFastWriter.append(trip.toString()).append("\n");
+                        // tooFastWriter.append(trip.toString()).append("\n");
                     }
-                } catch (NumberFormatException e) {
+                } catch (Exception e) {
                     System.out.println("Parse exception in record: " + trip);
-                    malformedWriter.append(trip.toString()).append("\n");
+                    // malformedWriter.append(trip.toString()).append("\n");
                 }
             }
 
@@ -260,13 +262,16 @@ public class TripReconstructor {
         public int getPartition(Text text, Text text2, int numPartitions) {
             // Partition based on the TaxiID: send every record of the same taxi to the same reducer
             int chosenPartition = text.toString().split(",")[0].hashCode() % numPartitions;
-            System.out.println("text: " + text + " text2: " + text2);
-            System.out.println("Num Partitions: " + numPartitions + ", chose partition: " + chosenPartition);
+            // System.out.println("text: " + text + " text2: " + text2);
+            // System.out.println("Num Partitions: " + numPartitions + ", chose partition: " + chosenPartition);
             return chosenPartition;
         }
     }
 
     public static void main(String[] args) throws Exception {
+	// Initialise log4j
+	//BasicConfigurator.configure();
+
         FileUtils.deleteDirectory(new File("../../../output"));
         Configuration conf = new Configuration();
         GenericOptionsParser optionParser = new GenericOptionsParser(conf, args);
@@ -281,7 +286,7 @@ public class TripReconstructor {
         job.setPartitionerClass(IDPartitioner.class);
         job.setGroupingComparatorClass(TaxiIDGroupingComparator.class);
         job.setSortComparatorClass(IDDateSortComparator.class);
-//        job.setNumReduceTasks(10); // TODO decide on the number of tasks: maybe 9 as there are 9 nodes in the DFS?
+        job.setNumReduceTasks(10); // TODO decide on the number of tasks: maybe 9 as there are 9 nodes in the DFS?
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
