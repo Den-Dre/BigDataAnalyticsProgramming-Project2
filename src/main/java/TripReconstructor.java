@@ -1,9 +1,7 @@
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Partitioner;
@@ -11,7 +9,6 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
-import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +60,6 @@ public class TripReconstructor {
 
     public static class SegmentsReducer extends Reducer<Text, Text, Text, Text> {
         private boolean printKeyValues;
-        private boolean printTooFastTrips;
         private final Logger logger = LoggerFactory.getLogger(SegmentsReducer.class);
 
         Text startOfTripRecord = new Text();
@@ -74,15 +70,12 @@ public class TripReconstructor {
         boolean tripActive = false;
 
         String[] parts;
-        String[] tempParts;
-//        StringBuilder coordinates = new StringBuilder();
         String tripString;
 
         @Override
         protected void setup(Reducer<Text, Text, Text, Text>.Context context) {
             Configuration conf = context.getConfiguration();
             printKeyValues = conf.getBoolean("printKeyValues", false);
-            printTooFastTrips = conf.getBoolean("printTooFastTrips", false);
         }
 
         @Override
@@ -91,79 +84,69 @@ public class TripReconstructor {
 
                 tripString = trip.toString();
                 if (tripString.contains("NULL")) {
-                    // TODO should trips that contain incomplete records still be considered valid?
-//                    tripActive = false;
+                    // We decide to cancel the trip as soon as we meet a corrupted record
+                    resetTrip();
                     continue;
                 }
 
                 // Defer splitting of a record to when it's absolutely necessary
                 // (i.e. when the test above is false)
-                tempParts = tripString.split(",");
+                // -> saves a few split()-calls
+                parts = tripString.split(",");
 
                 // Skip incomplete records
-                if (tempParts.length != 9) {
-                    // TODO should trips that contain incomplete records still be considered valid?
-//                    tripActive = false;
+                if (parts.length != 9) {
+                    // We decide to cancel the trip as soon as we meet a corrupted record
+                    resetTrip();
                     continue;
                 }
-                parts = tempParts;
 
                 try {
                     if (tripActive) {
                         // We consider a trip as an airport trip if at least one of its GPS locations is within a 1km range of the airport
                         if (!airportTrip)
                             airportTrip = isAirportTrip(parts[2], parts[3]);
-//                        airportTrip = airportTrip || isAirportTrip(parts[2], parts[3]);
                         tripDistance += GPSUtil.sphericalEarthDistance(
                                 parts[2],
                                 parts[3],
                                 parts[6],
                                 parts[7]
                         );
-//                        coordinates.append(parts[2]).append(",").append(parts[3]).append(" ");
                     }
 
                     // Start measuring a new trip if the Taxi's state changes from E (empty) to M (occupied)
                     // TODO also allow trip to start when first record is already M,M?
                     if (!tripActive && tripStartsNow(parts)) {
                         tripActive = true;
-                        startOfTripRecord.set(trip);
-//                        coordinates.append(parts[2]).append(",").append(parts[3]).append(" ");
-                    } else if (tripActive && tripEndsNow(parts)) {
-                        if (airportTrip) {
-                            value.set(
-                                    trip + " - "
-                                    + calculateFee(tripDistance) + " ; "
-                                    + tripDistance
-//                                    + (printTooFastTrips ? " - " + coordinates : "")
-                            );
-                            context.write(startOfTripRecord, value);
-                            airportTrip = false;
-                        }
-                        // TODO do we need to process trips that are not airport trips?
-//                    else {
-//                        context.write(startOfTripRecord, trip);
-//                    }
-//                    printGMapsURL(startOfTripRecord, trip);
-                        tripActive = false;
-                        tripDistance = 0;
+                        startOfTripRecord.set(parts[1] + " " + parts[2] + "," + parts[3]); // Start date and coordinates
+                    } else if (tripActive && airportTrip && tripEndsNow(parts)) {
+                        // We do not need to process trips that are not airport trips
+                        value.set(parts[6] + "," + parts[7] + " - " + calculateFee(tripDistance)); // End coordinates of trip + fee
+                        context.write(startOfTripRecord, value);
+                        resetTrip();
                         if (printKeyValues) System.out.println("REDUCE: " + startOfTripRecord + " : " + trip);
                     }
 
-                    // We're still in a trip:
-                    // Check if one of the current trip's segments exceeds a speed of 200 km/h
-                    if (tripActive && !realisticSpeed(parts)) {
-                        tripActive = false;
-                        airportTrip = false;
-                        tripDistance = 0.0;
+                    if (tripActive && !realisticSpeed(parts, logger)) {
+                        // We're still in a trip:
+                        // Check if one of the current trip's segments exceeds a speed of 200 km/h
+                        resetTrip();
                         logger.info("Record with excessive speed: " + trip);
                     }
                 } catch (Exception e) {
                     System.out.println("(Parse) exception: " + e +  " in record: " + trip);
+                    resetTrip();
                     logger.info("Malformed record: " + trip);
                 }
             }
 
+        }
+
+        // Cancel the current trip and set distance travelled to 0
+        private void resetTrip() {
+            tripActive = false;
+            airportTrip = false;
+            tripDistance = 0.0;
         }
 
         // Check whether the given coordinates are within a range of 1km of the airport coordinates
@@ -202,7 +185,7 @@ public class TripReconstructor {
 
         // Check whether the speed at which the taxi traveled between the start and end point
         // of this record is realistic (i.e. < 200 km/h)
-        private boolean realisticSpeed(String[] parts) {
+        private boolean realisticSpeed(String[] parts, Logger logger) {
             final double MAX_SPEED = 200.0;
             final String DATE_FORMAT = "yyyyy-MM-dd hh:mm:ss";
             DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
@@ -217,6 +200,7 @@ public class TripReconstructor {
             } catch (ParseException e) {
                 // If we can't parse the records, they must be malformed.
                 // Thus, we see this as an invalid speed
+                logger.info("Date parse exception");
                 return false;
             }
 
@@ -285,23 +269,59 @@ public class TripReconstructor {
         @Override
         public int getPartition(Text text, Text text2, int numPartitions) {
             // Partition based on the TaxiID: send every record of the same taxi to the same reducer
-            int chosenPartition = text.toString().split(",")[0].hashCode() % numPartitions;
-            // System.out.println("text: " + text + " text2: " + text2);
-            // System.out.println("Num Partitions: " + numPartitions + ", chose partition: " + chosenPartition);
-            return chosenPartition;
+            return text.toString().split(",")[0].hashCode() % numPartitions;
         }
     }
 
-    public static void main(String[] args) throws Exception {
-	// Initialise log4j
-	//BasicConfigurator.configure();
+   public static class RevenuePerDayMapper extends Mapper<Object, Text, Text, DoubleWritable> {
+       private final Text month = new Text();
+       private final DoubleWritable revenue = new DoubleWritable();
+       private final Logger logger = LoggerFactory.getLogger(RevenuePerDayMapper.class);
 
-        FileUtils.deleteDirectory(new File("../../../output"));
-        Configuration conf = new Configuration();
-        GenericOptionsParser optionParser = new GenericOptionsParser(conf, args);
-        String[] remainingArgs = optionParser.getRemainingArgs();
-        List<String> otherArgs = new ArrayList<>(Arrays.asList(remainingArgs));
+       @Override
+       protected void map(Object key, Text value, Mapper<Object, Text, Text, DoubleWritable>.Context context) throws IOException, InterruptedException {
+//           logger.info(key.toString() + " :: " + value.toString());
+           String monthVal = value.toString().split("-")[1];
+           double revenueVal = Double.parseDouble(value.toString().split(" - ")[1]);
+           month.set(monthVal);
+           revenue.set(revenueVal);
+           context.write(month, revenue);
+       }
+   }
 
+   public static class RevenuePartitioner extends Partitioner<Text, Text> {
+       /**
+        * Get the partition number for a given key (hence record) given the total
+        * number of partitions i.e. number of reduce-tasks for the job.
+        *
+        * <p>Typically a hash function on a all or a subset of the key.</p>
+        *
+        * @param text          the key to be partioned.
+        * @param text2         the entry value.
+        * @param numPartitions the total number of partitions.
+        * @return the partition number for the <code>key</code>.
+        */
+       @Override
+       public int getPartition(Text text, Text text2, int numPartitions) {
+           return text.toString().split("-")[1].hashCode() % numPartitions;
+       }
+   }
+
+   public static class RevenuePerDayReducer extends Reducer<Text, DoubleWritable, Text, DoubleWritable> {
+       private final DoubleWritable revenue = new DoubleWritable();
+
+       @Override
+       protected void reduce(Text key, Iterable<DoubleWritable> values, Reducer<Text, DoubleWritable, Text, DoubleWritable>.Context context) throws IOException, InterruptedException {
+           double revenueSum = 0;
+           for (DoubleWritable val : values) {
+               revenueSum += val.get();
+           }
+           revenue.set(revenueSum);
+           context.write(key, revenue);
+       }
+   }
+
+    private static Job getTripReconstructorJob(Configuration conf, Path input, Path output) throws IOException {
         Job job = Job.getInstance(conf, "Trip reconstruction");
         job.setJarByClass(TripReconstructor.class);
         job.setMapperClass(SegmentsMapper.class);
@@ -319,8 +339,52 @@ public class TripReconstructor {
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
-        FileInputFormat.addInputPath(job, new Path(otherArgs.get(0)));
-        FileOutputFormat.setOutputPath(job, new Path(otherArgs.get(1)));
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+
+        FileInputFormat.addInputPath(job, input);
+        FileOutputFormat.setOutputPath(job, output);
+
+        return job;
+    }
+
+    private static Job getRevenuePerDayJob(Path input, Path output) throws IOException {
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf, "Revenue per day job");
+        job.setJarByClass(TripReconstructor.class);
+        job.setMapperClass(RevenuePerDayMapper.class);
+        job.setReducerClass(RevenuePerDayReducer.class);
+        job.setPartitionerClass(RevenuePartitioner.class);
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(DoubleWritable.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(DoubleWritable.class);
+
+        FileInputFormat.addInputPath(job, input);
+        FileOutputFormat.setOutputPath(job, output);
+
+        return job;
+    }
+
+    public static void main(String[] args) throws Exception {
+        try {
+            FileUtils.deleteDirectory(new File("../../../output"));
+        } catch (IOException ignored) {}
+        Configuration conf = new Configuration();
+        GenericOptionsParser optionParser = new GenericOptionsParser(conf, args);
+        String[] remainingArgs = optionParser.getRemainingArgs();
+        List<String> otherArgs = new ArrayList<>(Arrays.asList(remainingArgs));
+        assert otherArgs.size() == 2:
+                "Jar must be called as: hadoop jar <jarFile> <mainClass> <inputFile> <outputDir>";
+
+        Path input = new Path(otherArgs.get(0));
+        Path intermediaryOutput = new Path(otherArgs.get(1), "revenuePerTrip");
+        Path output = new Path(otherArgs.get(1), "revenuePerMonth");
+
+        Job tripReconstructorJob = getTripReconstructorJob(conf, input, intermediaryOutput);
+        if (!tripReconstructorJob.waitForCompletion(true))
+            System.exit(1);
+
+        Job revenuePerMonthJob = getRevenuePerDayJob(intermediaryOutput, output);
+        if (!revenuePerMonthJob.waitForCompletion(true))
+            System.exit(1);
     }
 }
