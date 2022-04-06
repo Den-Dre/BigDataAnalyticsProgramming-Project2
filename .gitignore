@@ -27,3 +27,6 @@ data/
 
 # Output also takes up too much space
 output/
+
+# Ignore process files
+.nfs*
