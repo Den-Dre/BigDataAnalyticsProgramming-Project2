@@ -11,7 +11,7 @@ for nbMaps in $(seq 1 5); do
     echo "============================================"
     echo "Starting maps:${nbMaps} reduces:${nbReduces}"
     echo "============================================"
-    { time hadoop jar "$SRC"/TripReconstructor.jar TripReconstructor /data/all.segments output -Dmapreduce.job.maps="$nbMaps" -Dmapreduce.job.reduces="$nbReduces" ; } 2> "$OUT"/"2-maps:${nbMaps}reduces:${nbReduces}"
+    { time hadoop jar "$SRC"/TripReconstructor.jar TripReconstructor -D mapreduce.job.maps="$nbMaps" -D mapreduce.job.reduces="$nbReduces" /data/all.segments output ; } 2> "$OUT"/"2-maps:${nbMaps}reduces:${nbReduces}"
     # { time wget https://www.google.com ; } 2> "$OUT"/"maps:${nbMaps}reduces:${nbReduces}"
   done
 done

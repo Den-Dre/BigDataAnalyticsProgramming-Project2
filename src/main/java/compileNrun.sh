@@ -5,4 +5,7 @@
 hdfs dfs -rm -r output
 # hdfs dfs -put TripReconstructor.jar /user/r0760777/src
 # hadoop --loglevel DEBUG jar TripReconstructor.jar TripReconstructor /data/all.segments output
-hadoop jar TripReconstructor.jar TripReconstructor -D mapreduce.job.reduces=12 /data/all.segments output 
+
+# The call below is correct to provide number of reducers I think (it prints 12)
+hadoop jar TripReconstructor.jar TripReconstructor -D mapreduce.job.reduces=10 /data/all.segments output 
+
