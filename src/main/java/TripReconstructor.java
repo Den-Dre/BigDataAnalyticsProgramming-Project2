@@ -18,6 +18,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class TripReconstructor {
 
@@ -274,38 +275,43 @@ public class TripReconstructor {
     }
 
    public static class RevenuePerDayMapper extends Mapper<Object, Text, Text, DoubleWritable> {
-       private final Text month = new Text();
+       private final Text date = new Text();
        private final DoubleWritable revenue = new DoubleWritable();
        private final Logger logger = LoggerFactory.getLogger(RevenuePerDayMapper.class);
+       Pattern yearMonthPattern = Pattern.compile("[0-9]{4}-[0-9]{2}");
 
        @Override
        protected void map(Object key, Text value, Mapper<Object, Text, Text, DoubleWritable>.Context context) throws IOException, InterruptedException {
 //           logger.info(key.toString() + " :: " + value.toString());
-           String monthVal = value.toString().split("-")[1];
+           String yearMonth = value.toString().substring(1,8); // year-month
+           if (!yearMonthPattern.matcher(yearMonth).matches()) {
+               logger.info("Invalid date: " + yearMonth);
+               return;
+           }
            double revenueVal = Double.parseDouble(value.toString().split(" - ")[1]);
-           month.set(monthVal);
+           date.set(yearMonth);
            revenue.set(revenueVal);
-           context.write(month, revenue);
+           context.write(date, revenue);
        }
    }
 
-   public static class RevenuePartitioner extends Partitioner<Text, Text> {
-       /**
-        * Get the partition number for a given key (hence record) given the total
-        * number of partitions i.e. number of reduce-tasks for the job.
-        *
-        * <p>Typically a hash function on a all or a subset of the key.</p>
-        *
-        * @param text          the key to be partioned.
-        * @param text2         the entry value.
-        * @param numPartitions the total number of partitions.
-        * @return the partition number for the <code>key</code>.
-        */
-       @Override
-       public int getPartition(Text text, Text text2, int numPartitions) {
-           return text.toString().split("-")[1].hashCode() % numPartitions;
-       }
-   }
+//   public static class RevenuePartitioner extends Partitioner<Text, Text> {
+//       /**
+//        * Get the partition number for a given key (hence record) given the total
+//        * number of partitions i.e. number of reduce-tasks for the job.
+//        *
+//        * <p>Typically a hash function on a all or a subset of the key.</p>
+//        *
+//        * @param text          the key to be partioned.
+//        * @param text2         the entry value.
+//        * @param numPartitions the total number of partitions.
+//        * @return the partition number for the <code>key</code>.
+//        */
+//       @Override
+//       public int getPartition(Text text, Text text2, int numPartitions) {
+//           return text.toString().split("-")[1].hashCode() % numPartitions;
+//       }
+//   }
 
    public static class RevenuePerDayReducer extends Reducer<Text, DoubleWritable, Text, DoubleWritable> {
        private final DoubleWritable revenue = new DoubleWritable();
@@ -348,7 +354,7 @@ public class TripReconstructor {
         job.setJarByClass(TripReconstructor.class);
         job.setMapperClass(RevenuePerDayMapper.class);
         job.setReducerClass(RevenuePerDayReducer.class);
-        job.setPartitionerClass(RevenuePartitioner.class);
+//        job.setPartitionerClass(RevenuePartitioner.class);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(DoubleWritable.class);
         job.setOutputKeyClass(Text.class);
