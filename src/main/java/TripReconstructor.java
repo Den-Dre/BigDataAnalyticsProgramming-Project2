@@ -336,7 +336,11 @@ public class TripReconstructor {
         job.setPartitionerClass(IDPartitioner.class);
         job.setGroupingComparatorClass(TaxiIDGroupingComparator.class);
         job.setSortComparatorClass(IDDateSortComparator.class);
-//        job.setNumReduceTasks(10); // TODO decide on the number of tasks: maybe 10 as there are 10 nodes in the DFS?
+        //job.setNumReduceTasks(10); // TODO decide on the number of tasks: maybe 10 as there are 10 nodes in the DFS?
+	System.out.println(job.getNumReduceTasks());
+
+        final Logger logger = LoggerFactory.getLogger("TripReconstructor");
+	logger.info("Number of reducers: " + job.getNumReduceTasks());
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
