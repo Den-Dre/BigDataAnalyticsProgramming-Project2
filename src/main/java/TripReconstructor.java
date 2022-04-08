@@ -8,16 +8,21 @@ import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.shaded.okio.Buffer;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.geom.Path2D;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.List;
 import java.util.regex.Pattern;
 
 public class TripReconstructor {
@@ -29,6 +34,22 @@ public class TripReconstructor {
         // Create only one Text object, rather than creating a new one in every map call
         private final Text idDate = new Text();
         private String[] parts;
+        final static double LONG_TOPR = 37.8133;
+        final static double LAT_TOPR = -122.3914;
+        final static double LONG_TOPL = 37.780677;
+        final static double LAT_TOPL = -122.514566;
+
+        final static double LONG_BOTL = 37.603109;
+        final static double LAT_BOTL = -122.489704;
+        final static double LONG_BOTR = 37.605810;
+        final static double LAT_BOTR = -122.362741;
+
+        final static double[] longitudePoints = new double[]{LONG_TOPR, LONG_TOPL, LONG_BOTL, LONG_BOTR};
+        final static double[] latitudePoints = new double[]{LAT_TOPR, LAT_TOPL, LAT_BOTL, LAT_BOTR};
+        static Path2D path = new Path2D.Double();
+
+        private final static Logger logger = LoggerFactory.getLogger(SegmentsMapper.class);
+
 
         @Override
         protected void setup(Mapper<Object, Text, Text, Text>.Context context) {
@@ -36,14 +57,43 @@ public class TripReconstructor {
             printKeyValues = conf.getBoolean("printKeyValues", false);
         }
 
+        // Checks whether both the start and the end coordinates
+        // of a record are in a user-defined allowed region
+        private boolean legalGPSCoordinates(String[] parts) {
+            return path.contains(Double.parseDouble(parts[2]), Double.parseDouble(parts[3]))
+                && path.contains(Double.parseDouble(parts[6]), Double.parseDouble(parts[7]));
+        }
+
+        // Returns true if point lies to the right of the given line, or underneath of if viewed horizontally
+        // Returns 0 if the points are collinear
+        // Based on: https://stackoverflow.com/a/3461533/15482295
+        private static boolean segmentLiesOnLand(String[] parts) {
+            final double latStartLine = 37.594330;
+            final double longStartLine = -122.520747;
+            final double latEndLine = 37.779711;
+            final double longEndLine = -122.514836;
+            // We only check one point of the record to limit calculation time
+            final double latitudePoint = Double.parseDouble(parts[2]);
+            final double longitudePoint = Double.parseDouble(parts[3]);
+            return
+                ((longEndLine - longStartLine) * (latitudePoint - latStartLine)
+                - (latEndLine - latStartLine) * (longitudePoint - longStartLine)) <= 0
+                    || (latitudePoint > latEndLine || latitudePoint < latStartLine);
+        }
+
         @Override
         protected void map(Object key, Text value, Mapper<Object, Text, Text, Text>.Context context) throws IOException, InterruptedException {
             // We get as input one line of text and tokenize it into its separate parts
             parts = value.toString().split(",");
-            // E,E segments are of no use to reconstruct trips:
-            // We don't send these over the network to limit network delay
-            if (emptySegment(parts))
+            if (parts.length != 9) {
                 return;
+            }
+            // E,E segments are of no use to reconstruct trips:
+            // We don't send these over the network to limit delay due to network transmission
+            if (containsNull(value) || emptySegment(parts) || !segmentLiesOnLand(parts)) {
+                return;
+            }
+
             // We create a composite key based on the TaxiID + Start Date
             // This composite key is used in the group comparator, key comparator and partitioner defined below
             idDate.set(parts[0] + "," + parts[1]);
@@ -54,6 +104,10 @@ public class TripReconstructor {
         // Detect whether a segment doesn't contain any passengers at its start location, nor at its end location
         private boolean emptySegment(String[] parts) {
             return parts[4].equals("'E'") && parts[8].equals("'E'");
+        }
+
+        private boolean containsNull(Text record) {
+            return record.toString().contains("NULL");
         }
     }
 
@@ -132,7 +186,7 @@ public class TripReconstructor {
                         // We're still in a trip:
                         // Check if one of the current trip's segments exceeds a speed of 200 km/h
                         resetTrip();
-                        logger.info("Record with excessive speed: " + trip);
+//                        logger.info("Record with excessive speed: " + trip);
                     }
                 } catch (Exception e) {
                     System.out.println("(Parse) exception: " + e +  " in record: " + trip);
@@ -176,12 +230,16 @@ public class TripReconstructor {
         }
 
         // A utility method to construct the Google Maps API URL between two given coordinates
-        private void printGMapsURL(Text start, Text end) {
+        public static void printGMapsURL(Text start, Text end) {
             final String baseURL = "https://www.google.com/maps/dir/";
             final String startCoordinates = start.toString().split(",")[2] + "%2C" + start.toString().split(",")[3];
             final String endCoordinates = end.toString().split(",")[2] + "%2C" + end.toString().split(",")[3];
             String query = "?api=1&origin=" + startCoordinates + "&destination=" + endCoordinates;
             System.out.println(baseURL + query);
+        }
+        public static String printGMapsURL(String[] parts) {
+            System.out.println("https://www.google.com/maps/dir/?api=1&origin=" + parts[2] + "%2C" + parts[3] + "&destination=" + parts[6] + "%2C" + parts[7]);
+            return "https://www.google.com/maps/dir/?api=1&origin=" + parts[2] + "%2C" + parts[3] + "&destination=" + parts[6] + "%2C" + parts[7];
         }
 
         // Check whether the speed at which the taxi traveled between the start and end point
@@ -218,6 +276,7 @@ public class TripReconstructor {
             return deltaX / deltaT < MAX_SPEED;
         }
     }
+
 
     // Based on: https://vangjee.wordpress.com/2012/03/20/secondary-sorting-aka-sorting-values-in-hadoops-mapreduce-programming-paradigm/
     // This comparator is responsible for the sorting of the keys.
@@ -295,24 +354,6 @@ public class TripReconstructor {
        }
    }
 
-//   public static class RevenuePartitioner extends Partitioner<Text, Text> {
-//       /**
-//        * Get the partition number for a given key (hence record) given the total
-//        * number of partitions i.e. number of reduce-tasks for the job.
-//        *
-//        * <p>Typically a hash function on a all or a subset of the key.</p>
-//        *
-//        * @param text          the key to be partioned.
-//        * @param text2         the entry value.
-//        * @param numPartitions the total number of partitions.
-//        * @return the partition number for the <code>key</code>.
-//        */
-//       @Override
-//       public int getPartition(Text text, Text text2, int numPartitions) {
-//           return text.toString().split("-")[1].hashCode() % numPartitions;
-//       }
-//   }
-
    public static class RevenuePerDayReducer extends Reducer<Text, DoubleWritable, Text, DoubleWritable> {
        private final DoubleWritable revenue = new DoubleWritable();
 
@@ -358,7 +399,6 @@ public class TripReconstructor {
         job.setJarByClass(TripReconstructor.class);
         job.setMapperClass(RevenuePerDayMapper.class);
         job.setReducerClass(RevenuePerDayReducer.class);
-//        job.setPartitionerClass(RevenuePartitioner.class);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(DoubleWritable.class);
         job.setOutputKeyClass(Text.class);
