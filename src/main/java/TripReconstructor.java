@@ -15,7 +15,6 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.geom.Path2D;
 import java.io.File;
 import java.io.IOException;
 import java.text.DateFormat;
@@ -32,22 +31,6 @@ public class TripReconstructor {
         private boolean printKeyValues;
         // Create only one Text object, rather than creating a new one in every map call
         private final Text idDate = new Text();
-        private String[] parts;
-        final static double LONG_TOPR = 37.8133;
-        final static double LAT_TOPR = -122.3914;
-        final static double LONG_TOPL = 37.780677;
-        final static double LAT_TOPL = -122.514566;
-
-        final static double LONG_BOTL = 37.603109;
-        final static double LAT_BOTL = -122.489704;
-        final static double LONG_BOTR = 37.605810;
-        final static double LAT_BOTR = -122.362741;
-
-        @Deprecated
-        final static double[] longitudePoints = new double[]{LONG_TOPR, LONG_TOPL, LONG_BOTL, LONG_BOTR};
-        @Deprecated
-        final static double[] latitudePoints = new double[]{LAT_TOPR, LAT_TOPL, LAT_BOTL, LAT_BOTR};
-        static Path2D path = new Path2D.Double();
 
         @Override
         protected void setup(Mapper<Object, Text, Text, Text>.Context context) {
@@ -55,18 +38,11 @@ public class TripReconstructor {
             printKeyValues = conf.getBoolean("printKeyValues", false);
         }
 
-        // Checks whether both the start and the end coordinates
-        // of a record are in a user-defined allowed region
-        @Deprecated
-        private boolean legalGPSCoordinates(String[] parts) {
-            return path.contains(Double.parseDouble(parts[2]), Double.parseDouble(parts[3]))
-                && path.contains(Double.parseDouble(parts[6]), Double.parseDouble(parts[7]));
-        }
-
         // Returns true if point lies to the right of the given line, or underneath of if viewed horizontally
         // Returns 0 if the points are collinear
         // Based on: https://stackoverflow.com/a/3461533/15482295
-        private static boolean segmentLiesOnLand(String[] parts) {
+        @Deprecated
+        protected static boolean segmentLiesOnLand(String[] parts) {
             final double latStartLine = 37.594330;
             final double longStartLine = -122.520747;
             final double latEndLine = 37.779711;
@@ -83,10 +59,11 @@ public class TripReconstructor {
         @Override
         protected void map(Object key, Text value, Mapper<Object, Text, Text, Text>.Context context) throws IOException, InterruptedException {
             // We get as input one line of text and tokenize it into its separate parts
-            parts = value.toString().split(",");
+            String[] parts = value.toString().split(",");
+
             // E,E segments are of no use to reconstruct trips:
             // We don't send these over the network to limit delay due to network transmission
-            if (parts.length != 9 || containsNull(value) || emptySegment(parts) || !segmentLiesOnLand(parts)) {
+            if (parts.length != 9 || containsNull(value) || emptySegment(parts)) {
                 return;
             }
 
@@ -102,6 +79,7 @@ public class TripReconstructor {
             return parts[4].equals("'E'") && parts[8].equals("'E'");
         }
 
+        // Detect whether a segment contains NULL values
         private boolean containsNull(Text record) {
             return record.toString().contains("NULL");
         }
@@ -121,7 +99,6 @@ public class TripReconstructor {
         double tripDistance = 0;
         boolean airportTrip = false;
         boolean tripActive = false;
-        private static final StringBuilder coordinates = new StringBuilder();
 
         private static final String DATE_FORMAT = "yyyyy-MM-dd hh:mm:ss";
         private static final DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
@@ -141,11 +118,37 @@ public class TripReconstructor {
 
                 try {
                     if (tripActive) {
-                        if (tooMuchTimeInbetween(prevParts, parts)) {
-                            System.out.println("===" + Arrays.toString(prevParts) + " :: " + Arrays.toString(parts) + "===");
+                        if (differentTaxiID()) {
+                            // TaxiID of previous segment != taxiID of current segment
+                            // Given the ordering of the records, this indicates that a
+                            // trip is still active past the end of the recorded data
+                            // We choose to view these trips as incomplete, and thus we reject them
+
+                            // This check doesn't (and shouldn't) print anything:
+//                            if (!prevParts[1].split(" ")[0].split("-")[2].equals("31"))
+//                                System.out.println("=== Different ID issue ===");
                             resetTrip();
                             continue;
                         }
+                        if (subsetOfPreviousSegment()) {
+                            // Current segment is subset of the previous segment
+                            // Other cases (partial overlap, or this segment being a superset of the previous)
+                            // can't occur due to the ordering of the records and the checks above,
+                            // i.e. !(parts[1].compareTo(prevParts[1]) >= 0 && parts[5].compareTo(prevParts[5]) <= 0) && parts[1].compareTo(prevParts[5]) != 0
+                            // is always false at this point.
+                            // -> Continue the trip, but don't update the previously seen segment:
+
+                            // This check doesn't (and shouldn't) print anything
+//                            if (!(parts[1].compareTo(prevParts[1]) >= 0 && parts[5].compareTo(prevParts[5]) <= 0) && parts[1].compareTo(prevParts[5]) != 0)
+//                                System.out.println("=== Separated or partially overlapping segment ===");
+                            continue;
+                        }
+
+                        // Coordinates of subsequent segments always lign up at this point
+                        // This check doesn't (and shouldn't) print anything
+//                        if (!prevParts[6].equals(parts[2]) || !prevParts[7].equals(parts[3]))
+//                            System.out.println("=== Coordinates don't match ===");
+
                         // We consider a trip as an airport trip if at least one of its GPS locations is within a 1km range of the airport
                         if (!airportTrip)
                             airportTrip = isAirportTrip(parts[2], parts[3]);
@@ -157,15 +160,16 @@ public class TripReconstructor {
                                 parts[6],
                                 parts[7]
                         );
-                        coordinates.append(parts[6]).append(",").append(parts[7]).append("\n");
                     }
 
                     // Start measuring a new trip if the Taxi's state changes from E (empty) to M (occupied)
+                    // We don't count trips that start with M-M records when a trip is not yet active, which
+                    // represent trips that have already started before the start of our data
                     if (!tripActive && tripStartsNow(parts)) {
                         resetTrip();
                         tripActive = true;
                         // We set the start of this segment as start of the trip, as
-                        // it the customers are picked up somewehre in-between the time
+                        // it the customers are picked up somewhere in-between the time
                         // of state 'E' and time of state 'M'.
                         startOfTripRecord.set(parts[1] + " " + parts[2] + "," + parts[3]); // Start date and coordinates
                     } else if (tripActive && tripEndsNow(parts)) {
@@ -182,7 +186,6 @@ public class TripReconstructor {
                     // Check if one of the current trip's segments exceeds a speed of 200 km/h
                     if (tripActive && !realisticSpeed(parts)) {
                         resetTrip();
-//                        logger.info("Record with excessive speed: " + trip);
                     }
                 } catch (NumberFormatException e) {
                     System.out.println("(Parse) exception: " + e +  " in record: " + trip);
@@ -190,6 +193,7 @@ public class TripReconstructor {
                     logger.info("Malformed record: " + trip);
                 }
                 if (tripActive) {
+                    // If we're in a trip, keep track of the previously seen segment
                     prevParts = parts;
                 }
             }
@@ -197,27 +201,10 @@ public class TripReconstructor {
 
         // Cancel the current trip and set distance travelled to 0
         private void resetTrip() {
-            coordinates.setLength(0);
             prevParts = null;
             tripActive = false;
             airportTrip = false;
             tripDistance = 0.0;
-        }
-
-        private boolean tooMuchTimeInbetween(String[] prevParts, String[] parts) {
-            Date endFirstTrip;
-            Date startSecondTrip;
-
-            try {
-                endFirstTrip = dateFormat.parse(prevParts[5].replace("'", ""));
-                startSecondTrip = dateFormat.parse(parts[1].replace("'", ""));
-            } catch (ParseException e) {
-                // If we can't parse the records, they must be malformed.
-                logger.info("Date parse exception " + Arrays.toString(parts));
-                return true;
-            }
-            // At most 10 seconds may pass in between two segments
-            return (((double) startSecondTrip.getTime() - endFirstTrip.getTime()) / 1000) > 10;
         }
 
         // Check whether the given coordinates are within a range of 1km of the airport coordinates
@@ -245,7 +232,18 @@ public class TripReconstructor {
             return parts[4].equals("'M'") && parts[8].equals("'E'");
         }
 
+        // Check whether the current segment occurred within the timespan of the previous segment
+        private boolean subsetOfPreviousSegment() {
+            return parts[1].compareTo(prevParts[1]) >= 0 && parts[5].compareTo(prevParts[5]) <= 0;
+        }
+
+        // Check whether the TaxiID of the current segment doesn't match that of the previous segment
+        private boolean differentTaxiID() {
+            return !prevParts[0].equals(parts[0]);
+        }
+
         // A utility method to construct the Google Maps API URL between two given coordinates
+        // Used for testing
         public static void printGMapsURL(Text start, Text end) {
             final String baseURL = "https://www.google.com/maps/dir/";
             final String startCoordinates = start.toString().split(",")[2] + "%2C" + start.toString().split(",")[3];
@@ -253,6 +251,8 @@ public class TripReconstructor {
             String query = "?api=1&origin=" + startCoordinates + "&destination=" + endCoordinates;
             System.out.println(baseURL + query);
         }
+
+        // Used for testing
         public static String printGMapsURL(String[] parts) {
             System.out.println("https://www.google.com/maps/dir/?api=1&origin=" + parts[2] + "%2C" + parts[3] + "&destination=" + parts[6] + "%2C" + parts[7]);
             return "https://www.google.com/maps/dir/?api=1&origin=" + parts[2] + "%2C" + parts[3] + "&destination=" + parts[6] + "%2C" + parts[7];
@@ -289,8 +289,7 @@ public class TripReconstructor {
         }
     }
 
-
-    // Based on: https://vangjee.wordpress.com/2012/03/20/secondary-sorting-aka-sorting-values-in-hadoops-mapreduce-programming-paradigm/
+// Based on: https://vangjee.wordpress.com/2012/03/20/secondary-sorting-aka-sorting-values-in-hadoops-mapreduce-programming-paradigm/
     // This comparator is responsible for the sorting of the keys.
     // We first sort on the TaxiID, and if these are equal, we sort on the Start Date
     public static class IDDateSortComparator extends WritableComparator {
