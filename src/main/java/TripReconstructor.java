@@ -43,12 +43,11 @@ public class TripReconstructor {
         final static double LONG_BOTR = 37.605810;
         final static double LAT_BOTR = -122.362741;
 
+        @Deprecated
         final static double[] longitudePoints = new double[]{LONG_TOPR, LONG_TOPL, LONG_BOTL, LONG_BOTR};
+        @Deprecated
         final static double[] latitudePoints = new double[]{LAT_TOPR, LAT_TOPL, LAT_BOTL, LAT_BOTR};
         static Path2D path = new Path2D.Double();
-
-        private final static Logger logger = LoggerFactory.getLogger(SegmentsMapper.class);
-
 
         @Override
         protected void setup(Mapper<Object, Text, Text, Text>.Context context) {
@@ -58,6 +57,7 @@ public class TripReconstructor {
 
         // Checks whether both the start and the end coordinates
         // of a record are in a user-defined allowed region
+        @Deprecated
         private boolean legalGPSCoordinates(String[] parts) {
             return path.contains(Double.parseDouble(parts[2]), Double.parseDouble(parts[3]))
                 && path.contains(Double.parseDouble(parts[6]), Double.parseDouble(parts[7]));
@@ -75,7 +75,7 @@ public class TripReconstructor {
             final double latitudePoint = Double.parseDouble(parts[2]);
             final double longitudePoint = Double.parseDouble(parts[3]);
             return
-                ((longEndLine - longStartLine) * (latitudePoint - latStartLine)
+                Math.signum((longEndLine - longStartLine) * (latitudePoint - latStartLine)
                 - (latEndLine - latStartLine) * (longitudePoint - longStartLine)) <= 0
                     || (latitudePoint > latEndLine || latitudePoint < latStartLine);
         }
@@ -84,12 +84,9 @@ public class TripReconstructor {
         protected void map(Object key, Text value, Mapper<Object, Text, Text, Text>.Context context) throws IOException, InterruptedException {
             // We get as input one line of text and tokenize it into its separate parts
             parts = value.toString().split(",");
-            if (parts.length != 9) {
-                return;
-            }
             // E,E segments are of no use to reconstruct trips:
             // We don't send these over the network to limit delay due to network transmission
-            if (containsNull(value) || emptySegment(parts) || !segmentLiesOnLand(parts)) {
+            if (parts.length != 9 || containsNull(value) || emptySegment(parts) || !segmentLiesOnLand(parts)) {
                 return;
             }
 
@@ -118,89 +115,109 @@ public class TripReconstructor {
 
         Text startOfTripRecord = new Text();
         Text value = new Text();
+        String[] prevParts;
+        String[] parts;
 
         double tripDistance = 0;
         boolean airportTrip = false;
         boolean tripActive = false;
+        private static final StringBuilder coordinates = new StringBuilder();
 
-        String[] parts;
-        String tripString;
+        private static final String DATE_FORMAT = "yyyyy-MM-dd hh:mm:ss";
+        private static final DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+        private static final TimeZone timeZone = TimeZone.getTimeZone("America/Los_Angeles");
 
         @Override
         protected void setup(Reducer<Text, Text, Text, Text>.Context context) {
             Configuration conf = context.getConfiguration();
             printKeyValues = conf.getBoolean("printKeyValues", false);
+            dateFormat.setTimeZone(timeZone);
         }
 
         @Override
-        protected void reduce(Text key, Iterable<Text> values, Reducer<Text, Text, Text, Text>.Context context) {
+        protected void reduce(Text key, Iterable<Text> values, Reducer<Text, Text, Text, Text>.Context context) throws IOException, InterruptedException {
             for (Text trip : values) {
-
-                tripString = trip.toString();
-                if (tripString.contains("NULL")) {
-                    // We decide to cancel the trip as soon as we meet a corrupted record
-                    resetTrip();
-                    continue;
-                }
-
-                // Defer splitting of a record to when it's absolutely necessary
-                // (i.e. when the test above is false)
-                // -> saves a few split()-calls
-                parts = tripString.split(",");
-
-                // Skip incomplete records
-                if (parts.length != 9) {
-                    // We decide to cancel the trip as soon as we meet a corrupted record
-                    resetTrip();
-                    continue;
-                }
+                parts = trip.toString().split(",");
 
                 try {
                     if (tripActive) {
+                        if (tooMuchTimeInbetween(prevParts, parts)) {
+                            System.out.println("===" + Arrays.toString(prevParts) + " :: " + Arrays.toString(parts) + "===");
+                            resetTrip();
+                            continue;
+                        }
                         // We consider a trip as an airport trip if at least one of its GPS locations is within a 1km range of the airport
                         if (!airportTrip)
                             airportTrip = isAirportTrip(parts[2], parts[3]);
+                        // Distance of the first segment (E-M transition) is not included,
+                        // but distance of the last segment (M-E transition) is included to balance out differences
                         tripDistance += GPSUtil.sphericalEarthDistance(
                                 parts[2],
                                 parts[3],
                                 parts[6],
                                 parts[7]
                         );
+                        coordinates.append(parts[6]).append(",").append(parts[7]).append("\n");
                     }
 
                     // Start measuring a new trip if the Taxi's state changes from E (empty) to M (occupied)
-                    // TODO also allow trip to start when first record is already M,M?
                     if (!tripActive && tripStartsNow(parts)) {
+                        resetTrip();
                         tripActive = true;
+                        // We set the start of this segment as start of the trip, as
+                        // it the customers are picked up somewehre in-between the time
+                        // of state 'E' and time of state 'M'.
                         startOfTripRecord.set(parts[1] + " " + parts[2] + "," + parts[3]); // Start date and coordinates
-                    } else if (tripActive && airportTrip && tripEndsNow(parts)) {
+                    } else if (tripActive && tripEndsNow(parts)) {
                         // We do not need to process trips that are not airport trips
-                        value.set(parts[6] + "," + parts[7] + " - " + calculateFee(tripDistance)); // End coordinates of trip + fee
-                        context.write(startOfTripRecord, value);
+                        if (airportTrip) {
+                            value.set(parts[6] + "," + parts[7] + " - " + calculateFee(tripDistance)); // End coordinates of trip + fee
+                            context.write(startOfTripRecord, value);
+                        }
                         resetTrip();
                         if (printKeyValues) System.out.println("REDUCE: " + startOfTripRecord + " : " + trip);
                     }
 
-                    if (tripActive && !realisticSpeed(parts, logger)) {
-                        // We're still in a trip:
-                        // Check if one of the current trip's segments exceeds a speed of 200 km/h
+                    // We're still in a trip:
+                    // Check if one of the current trip's segments exceeds a speed of 200 km/h
+                    if (tripActive && !realisticSpeed(parts)) {
                         resetTrip();
 //                        logger.info("Record with excessive speed: " + trip);
                     }
-                } catch (Exception e) {
+                } catch (NumberFormatException e) {
                     System.out.println("(Parse) exception: " + e +  " in record: " + trip);
                     resetTrip();
                     logger.info("Malformed record: " + trip);
                 }
+                if (tripActive) {
+                    prevParts = parts;
+                }
             }
-
         }
 
         // Cancel the current trip and set distance travelled to 0
         private void resetTrip() {
+            coordinates.setLength(0);
+            prevParts = null;
             tripActive = false;
             airportTrip = false;
             tripDistance = 0.0;
+        }
+
+        private boolean tooMuchTimeInbetween(String[] prevParts, String[] parts) {
+            Date endFirstTrip;
+            Date startSecondTrip;
+
+            try {
+                endFirstTrip = dateFormat.parse(prevParts[5].replace("'", ""));
+                startSecondTrip = dateFormat.parse(parts[1].replace("'", ""));
+            } catch (ParseException e) {
+                // If we can't parse the records, they must be malformed.
+                logger.info("Date parse exception " + Arrays.toString(parts));
+                return true;
+            }
+            // At most 10 seconds may pass in between two segments
+            return (((double) startSecondTrip.getTime() - endFirstTrip.getTime()) / 1000) > 10;
         }
 
         // Check whether the given coordinates are within a range of 1km of the airport coordinates
@@ -243,12 +260,8 @@ public class TripReconstructor {
 
         // Check whether the speed at which the taxi traveled between the start and end point
         // of this record is realistic (i.e. < 200 km/h)
-        private boolean realisticSpeed(String[] parts, Logger logger) {
+        private boolean realisticSpeed(String[] parts) {
             final double MAX_SPEED = 200.0;
-            final String DATE_FORMAT = "yyyyy-MM-dd hh:mm:ss";
-            DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-            TimeZone timeZone = TimeZone.getTimeZone("America/Los_Angeles");
-            dateFormat.setTimeZone(timeZone);
             Date startDate;
             Date endDate;
 

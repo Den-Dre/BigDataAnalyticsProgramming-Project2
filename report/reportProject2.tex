@@ -1,0 +1,36 @@
+\documentclass[12pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{amssymb}
+
+
+\title{Report Project 2: BDAP [B-KUL-H00Y4A]}
+\author{Andreas Hinderyckx}
+\date{April 2022} 
+
+\usepackage{graphicx}
+\usepackage{caption}
+
+\begin{document}
+
+\maketitle
+
+
+\subsection*{Part 1: Trip Length Distribution}
+\subsection*{Part 2: Computing Airport Revenue}
+
+\textbf{Identifying erroneous GPS points}
+The first technique used to identify erroneous GPS points is the one suggested in the assignment: the calculated speed of a segment must be smaller than 200 km/h. A lower speed limit was not chosen, as GPS results may be imprecise at times, which could cause valid but slightly inaccurate trips to be skipped as well. Secondly, it was apparent that quite some GPS points were located in the sea, to the West of San Francisco. On Google Maps, two coordinates were handpicked to create a rough approximation of the coastline. Points located to the west of this approximated coastline were rejected. This check rejected about 1500 points, but did hurt performance however (see below). Finally, between every two segments of a trip, it is checked whether the elapsed time between the end time of the first segment and the start time of the second segment doesn't exceed three seconds.
+
+\noindent\\\textbf{Reconstructing the trips}
+The trips are reconstructed in the first of the two map-reduce-processes. Firstly, each segment is given a key: \texttt{TaxiID,StartDate}: this makes sure that the segments are primarily sorted on \texttt{TaxiID} and secondary sorted on \texttt{StartDate}. The \texttt{mapper} also rejects malformed records (see below) and doesn't map \texttt{E-E}-records as these don't contribute to a trip. Additionally, a \texttt{Partitioner} is added to ensure that segments with the same \texttt{TaxiID} end up at the same reduce-task. 
+
+Next, given the sorted order of the records, the trips can be constructed during the reduce-phase. The reducer scans for a records that transitions from the \texttt{E} state to the \texttt{M} state to initiate a trip. subsequent records are added to the trip, until a records is encountered that transitions from the \texttt{M} state to the \texttt{E} state. During this process, the reducer rejects trips that contain a records with excessive speed, or that contain records with a time gap in-between them that is larger than 3 seconds.
+
+\noindent\\\textbf{Efficiency of the solution}
+{\huge TODO} Due to the check that verifies whether a GPS point is not located at sea, the execution time of the program rose with 30\% (from $\sim9$ to $\sim12$ minutes). As these mislocated records only constitute $5\cdot 10^{-4}\%$ of the total amount of records, this is a significant performance penalty to pay for a small gain in accuracy.
+\noindent\\\textbf{Total revenue \& revenue over time}
+
+\end{document}
