@@ -34,8 +34,8 @@ public class SparkDistances {
         JavaRDD<Row> data = readData(System.getProperty("user.dir") + "/data/2010_03.trips");
         long currentTime = System.currentTimeMillis();
         List<Double> distances = getDistances(data);
-        System.out.println("Spark took: " + (System.currentTimeMillis() - currentTime));
         writeResults(distances);
+        System.out.println("Spark took: " + (System.currentTimeMillis() - currentTime));
         jsc.stop();
     }
 
@@ -57,7 +57,6 @@ public class SparkDistances {
 
     private static List<Double> getDistances(JavaRDD<Row> data) {
         JavaRDD<Double> mapping = data.map((Function<Row, Double>) row -> {
-            // TODO find a suitable way to handle possibly malformed records
                     try {
                         return GPSUtil.sphericalEarthDistance(
                                 row.getString(2),

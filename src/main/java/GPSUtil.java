@@ -13,17 +13,20 @@ public class GPSUtil {
         BufferedWriter writer = new BufferedWriter(new FileWriter(userDir + "/data/distances.csv", false));
         String currentLine;
         writer.write("TaxiID Distance\n");
-        long currentTime = System.currentTimeMillis();
-        long totalTime = 0;
+        long startTime = System.currentTimeMillis();
+        double dist;
         while ((currentLine = reader.readLine()) != null) {
-            currentTime = System.currentTimeMillis();
-            double dist  = getDistance(currentLine);
-            totalTime += System.currentTimeMillis() - currentTime;
+            dist  = getDistance(currentLine);
+            // Writing each line to the output file separately,
+            // results in the same performance as storing the results in a
+            // StringBuilder and writing them once to the output file at the end.
+            // Thus, we opt for the first option, as this limits memory usage.
             writer.write(currentLine.split(" ")[0] + " " + dist + "\n");
         }
-        System.out.println("Default implementation took: " + totalTime);
         reader.close();
+        writer.flush();
         writer.close();
+        System.out.println("Default implementation took: " + (System.currentTimeMillis() - startTime));
     }
 
     private static double getDistance(String line) {
