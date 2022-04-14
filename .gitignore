@@ -23,7 +23,11 @@
 hs_err_pid*
 
 # data takes up too much space for git
-data/
+data/*
+# But don't ignore trips file: https://stackoverflow.com/questions/987142/make-gitignore-ignore-everything-except-a-few-files
+!data/2010_03.trips
+
+
 
 # Output also takes up too much space
 output/

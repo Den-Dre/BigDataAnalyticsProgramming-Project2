@@ -89,6 +89,7 @@ public class TripReconstructor {
 
     public static class SegmentsReducer extends Reducer<Text, Text, Text, Text> {
         private boolean printKeyValues;
+	private boolean printSeaTripCoordinates;
         private final Logger logger = LoggerFactory.getLogger(SegmentsReducer.class);
 
         Text startOfTripRecord = new Text();
@@ -103,11 +104,19 @@ public class TripReconstructor {
         private static final String DATE_FORMAT = "yyyyy-MM-dd hh:mm:ss";
         private static final DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
         private static final TimeZone timeZone = TimeZone.getTimeZone("America/Los_Angeles");
+	private Text seaSegment = null;
+	private StringBuilder coordinates = new StringBuilder();
+	private static final String THRESH_LONG = "-122.61";
+	private static final String THRESH_LAT_BOT = "-122.61";
+	private static final String THRESH_LAT_TOP = "-122.61";
+
+
 
         @Override
         protected void setup(Reducer<Text, Text, Text, Text>.Context context) {
             Configuration conf = context.getConfiguration();
             printKeyValues = conf.getBoolean("printKeyValues", false);
+            printSeaTripCoordinates = conf.getBoolean("printSeaTripCoordinates", false);
             dateFormat.setTimeZone(timeZone);
         }
 
@@ -116,6 +125,8 @@ public class TripReconstructor {
             for (Text trip : values) {
                 parts = trip.toString().split(",");
 
+		//if (!SegmentsMapper.segmentLiesOnLand(parts))
+		//    seaSegment = trip;
                 try {
                     if (tripActive) {
                         if (differentTaxiID()) {
@@ -160,6 +171,8 @@ public class TripReconstructor {
                                 parts[6],
                                 parts[7]
                         );
+			// if (seaSegment != null) coordinates.append(parts[2]).append(",").append(parts[3]).append("\n");
+			if (printSeaTripCoordinates) coordinates.append(trip).append("\n");
                     }
 
                     // Start measuring a new trip if the Taxi's state changes from E (empty) to M (occupied)
@@ -175,6 +188,9 @@ public class TripReconstructor {
                     } else if (tripActive && tripEndsNow(parts)) {
                         // We do not need to process trips that are not airport trips
                         if (airportTrip) {
+			    if (printSeaTripCoordinates == true && seaSegment != null) {
+				logger.info("=== Used sea segment in airport trip: " + seaSegment + " coordinates: \n" + coordinates.toString() + " ===");
+			    }
                             value.set(parts[6] + "," + parts[7] + " - " + calculateFee(tripDistance)); // End coordinates of trip + fee
                             context.write(startOfTripRecord, value);
                         }
@@ -205,6 +221,8 @@ public class TripReconstructor {
             tripActive = false;
             airportTrip = false;
             tripDistance = 0.0;
+	    seaSegment = null;
+	    if (printSeaTripCoordinates) coordinates.setLength(0);
         }
 
         // Check whether the given coordinates are within a range of 1km of the airport coordinates

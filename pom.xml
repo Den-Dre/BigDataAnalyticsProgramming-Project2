@@ -21,8 +21,39 @@
     </dependencies>
 
     <properties>
-        <maven.compiler.source>15</maven.compiler.source>
-        <maven.compiler.target>15</maven.compiler.target>
+        <maven.compiler.source>8</maven.compiler.source> <!-- was: 15 -->
+        <maven.compiler.target>8</maven.compiler.target> <!-- was: 15 -->
     </properties>
-    
+	<build>
+	  <plugins>
+	    <plugin>
+	      <!-- Build an executable JAR -->
+	      <groupId>org.apache.maven.plugins</groupId>
+	      <artifactId>maven-jar-plugin</artifactId>
+	      <version>3.1.0</version>
+	      <configuration>
+		<archive>
+		  <manifest>
+		    <addClasspath>true</addClasspath>
+		    <classpathPrefix>lib/</classpathPrefix>
+		    <mainClass>Main</mainClass>
+		  </manifest>
+		</archive>
+	      </configuration>
+	    </plugin>
+	    <plugin>
+	      <artifactId>maven-assembly-plugin</artifactId>
+	      <configuration>
+		<archive>
+		  <manifest>
+		    <mainClass>Main</mainClass>
+		  </manifest>
+		</archive>
+		<descriptorRefs>
+		  <descriptorRef>jar-with-dependencies</descriptorRef>
+		</descriptorRefs>
+	      </configuration>
+	    </plugin>
+	  </plugins>
+	</build>
 </project>
