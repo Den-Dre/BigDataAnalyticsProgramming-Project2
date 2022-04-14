@@ -28,9 +28,11 @@ data/*
 !data/2010_03.trips
 
 
-
 # Output also takes up too much space
 output/
+
+# Don't include compiled files
+target/
 
 # Ignore process files
 .nfs*
