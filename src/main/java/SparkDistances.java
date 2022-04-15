@@ -51,7 +51,7 @@ public class SparkDistances {
      * @throws IOException: If the .trips data can't be read in
      */
     protected void calculateDistances() throws IOException {
-        JavaRDD<Row> data = readData(System.getProperty("user.dir") + "/data/2010_03.trips");
+        JavaRDD<Row> data = readData(System.getProperty("user.dir") + "/2010_03.trips");
         long currentTime = System.currentTimeMillis();
         List<Double> distances = getDistances(data);
         writeResults(distances);

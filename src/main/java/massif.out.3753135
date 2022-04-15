@@ -1,0 +1,693 @@
+desc: (none)
+cmd: ./runSparkTrips.sh
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=196448
+mem_heap_B=32
+mem_heap_extra_B=8
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=2
+#-----------
+time=196944
+mem_heap_B=64
+mem_heap_extra_B=16
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=3
+#-----------
+time=197226
+mem_heap_B=96
+mem_heap_extra_B=24
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=4
+#-----------
+time=197658
+mem_heap_B=128
+mem_heap_extra_B=32
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=5
+#-----------
+time=198034
+mem_heap_B=160
+mem_heap_extra_B=40
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=6
+#-----------
+time=198549
+mem_heap_B=192
+mem_heap_extra_B=48
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=7
+#-----------
+time=198877
+mem_heap_B=224
+mem_heap_extra_B=56
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=8
+#-----------
+time=199148
+mem_heap_B=256
+mem_heap_extra_B=64
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=9
+#-----------
+time=199658
+mem_heap_B=288
+mem_heap_extra_B=72
+mem_stacks_B=0
+heap_tree=detailed
+n1: 288 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 288 0x116D4C: ??? (in /usr/bin/dash)
+  n1: 288 0x11E4F8: ??? (in /usr/bin/dash)
+   n1: 288 0x11F16C: ??? (in /usr/bin/dash)
+    n1: 288 0x10DB73: ??? (in /usr/bin/dash)
+     n0: 288 0x48900B2: (below main) (libc-start.c:308)
+#-----------
+snapshot=10
+#-----------
+time=200039
+mem_heap_B=320
+mem_heap_extra_B=80
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=11
+#-----------
+time=200305
+mem_heap_B=352
+mem_heap_extra_B=88
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=12
+#-----------
+time=200635
+mem_heap_B=384
+mem_heap_extra_B=96
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=13
+#-----------
+time=200944
+mem_heap_B=416
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=14
+#-----------
+time=201631
+mem_heap_B=448
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=15
+#-----------
+time=201945
+mem_heap_B=480
+mem_heap_extra_B=120
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=16
+#-----------
+time=202677
+mem_heap_B=512
+mem_heap_extra_B=128
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=17
+#-----------
+time=202996
+mem_heap_B=544
+mem_heap_extra_B=136
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=18
+#-----------
+time=203315
+mem_heap_B=576
+mem_heap_extra_B=144
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=19
+#-----------
+time=203477
+mem_heap_B=608
+mem_heap_extra_B=152
+mem_stacks_B=0
+heap_tree=detailed
+n1: 608 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 608 0x116D4C: ??? (in /usr/bin/dash)
+  n1: 608 0x11E4F8: ??? (in /usr/bin/dash)
+   n1: 608 0x11F16C: ??? (in /usr/bin/dash)
+    n1: 608 0x10DB73: ??? (in /usr/bin/dash)
+     n0: 608 0x48900B2: (below main) (libc-start.c:308)
+#-----------
+snapshot=20
+#-----------
+time=204016
+mem_heap_B=640
+mem_heap_extra_B=160
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=21
+#-----------
+time=204263
+mem_heap_B=672
+mem_heap_extra_B=168
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=22
+#-----------
+time=204749
+mem_heap_B=704
+mem_heap_extra_B=176
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=23
+#-----------
+time=208776
+mem_heap_B=736
+mem_heap_extra_B=184
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=24
+#-----------
+time=209286
+mem_heap_B=768
+mem_heap_extra_B=192
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=25
+#-----------
+time=209860
+mem_heap_B=800
+mem_heap_extra_B=200
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=26
+#-----------
+time=210107
+mem_heap_B=832
+mem_heap_extra_B=208
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=27
+#-----------
+time=210564
+mem_heap_B=864
+mem_heap_extra_B=216
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=28
+#-----------
+time=210835
+mem_heap_B=896
+mem_heap_extra_B=224
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=29
+#-----------
+time=211163
+mem_heap_B=928
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=detailed
+n1: 928 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 928 0x116D4C: ??? (in /usr/bin/dash)
+  n1: 928 0x11E4F8: ??? (in /usr/bin/dash)
+   n1: 928 0x11F16C: ??? (in /usr/bin/dash)
+    n1: 928 0x10DB73: ??? (in /usr/bin/dash)
+     n0: 928 0x48900B2: (below main) (libc-start.c:308)
+#-----------
+snapshot=30
+#-----------
+time=211529
+mem_heap_B=960
+mem_heap_extra_B=240
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=31
+#-----------
+time=211907
+mem_heap_B=992
+mem_heap_extra_B=248
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=32
+#-----------
+time=212403
+mem_heap_B=1024
+mem_heap_extra_B=256
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=33
+#-----------
+time=212733
+mem_heap_B=1056
+mem_heap_extra_B=264
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=34
+#-----------
+time=213282
+mem_heap_B=1088
+mem_heap_extra_B=272
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=35
+#-----------
+time=213639
+mem_heap_B=1120
+mem_heap_extra_B=280
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=36
+#-----------
+time=213881
+mem_heap_B=1152
+mem_heap_extra_B=288
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=37
+#-----------
+time=214358
+mem_heap_B=1184
+mem_heap_extra_B=296
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=38
+#-----------
+time=214739
+mem_heap_B=1216
+mem_heap_extra_B=304
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=39
+#-----------
+time=215072
+mem_heap_B=1248
+mem_heap_extra_B=312
+mem_stacks_B=0
+heap_tree=detailed
+n1: 1248 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 1248 0x116D4C: ??? (in /usr/bin/dash)
+  n1: 1248 0x11E4F8: ??? (in /usr/bin/dash)
+   n1: 1248 0x11F16C: ??? (in /usr/bin/dash)
+    n1: 1248 0x10DB73: ??? (in /usr/bin/dash)
+     n0: 1248 0x48900B2: (below main) (libc-start.c:308)
+#-----------
+snapshot=40
+#-----------
+time=215391
+mem_heap_B=1280
+mem_heap_extra_B=320
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=41
+#-----------
+time=215686
+mem_heap_B=1312
+mem_heap_extra_B=328
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=42
+#-----------
+time=216244
+mem_heap_B=1344
+mem_heap_extra_B=336
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=43
+#-----------
+time=216678
+mem_heap_B=1376
+mem_heap_extra_B=344
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=44
+#-----------
+time=218063
+mem_heap_B=1408
+mem_heap_extra_B=352
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=45
+#-----------
+time=218384
+mem_heap_B=1479
+mem_heap_extra_B=369
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=46
+#-----------
+time=218623
+mem_heap_B=1554
+mem_heap_extra_B=382
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=47
+#-----------
+time=231422
+mem_heap_B=1570
+mem_heap_extra_B=390
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=48
+#-----------
+time=232144
+mem_heap_B=2082
+mem_heap_extra_B=398
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=49
+#-----------
+time=233039
+mem_heap_B=2242
+mem_heap_extra_B=406
+mem_stacks_B=0
+heap_tree=detailed
+n4: 2242 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n3: 1499 0x116D4C: ??? (in /usr/bin/dash)
+  n2: 1408 0x11E4F8: ??? (in /usr/bin/dash)
+   n1: 1376 0x11F16C: ??? (in /usr/bin/dash)
+    n1: 1376 0x10DB73: ??? (in /usr/bin/dash)
+     n0: 1376 0x48900B2: (below main) (libc-start.c:308)
+   n1: 32 0x11F1BB: ??? (in /usr/bin/dash)
+    n1: 32 0x10DB73: ??? (in /usr/bin/dash)
+     n0: 32 0x48900B2: (below main) (libc-start.c:308)
+  n1: 75 0x11E634: ??? (in /usr/bin/dash)
+   n1: 75 0x11F1E0: ??? (in /usr/bin/dash)
+    n1: 75 0x10DB73: ??? (in /usr/bin/dash)
+     n0: 75 0x48900B2: (below main) (libc-start.c:308)
+  n0: 16 in 1 place, below massif's threshold (1.00%)
+ n1: 512 0x116E16: ??? (in /usr/bin/dash)
+  n1: 512 0x117029: ??? (in /usr/bin/dash)
+   n1: 512 0x117184: ??? (in /usr/bin/dash)
+    n1: 512 0x113996: ??? (in /usr/bin/dash)
+     n1: 512 0x113E9A: ??? (in /usr/bin/dash)
+      n1: 512 0x1104BF: ??? (in /usr/bin/dash)
+       n1: 512 0x10F716: ??? (in /usr/bin/dash)
+        n1: 512 0x116B1B: ??? (in /usr/bin/dash)
+         n1: 512 0x10DC81: ??? (in /usr/bin/dash)
+          n0: 512 0x48900B2: (below main) (libc-start.c:308)
+ n1: 160 0x116D7C: ??? (in /usr/bin/dash)
+  n1: 160 0x116094: ??? (in /usr/bin/dash)
+   n1: 160 0x110B00: ??? (in /usr/bin/dash)
+    n1: 160 0x113BDA: ??? (in /usr/bin/dash)
+     n1: 160 0x113E9A: ??? (in /usr/bin/dash)
+      n1: 160 0x1104BF: ??? (in /usr/bin/dash)
+       n1: 160 0x10F716: ??? (in /usr/bin/dash)
+        n1: 160 0x116B1B: ??? (in /usr/bin/dash)
+         n1: 160 0x10DC81: ??? (in /usr/bin/dash)
+          n0: 160 0x48900B2: (below main) (libc-start.c:308)
+ n1: 71 0x490B3BE: strdup (strdup.c:42)
+  n1: 71 0x116DAC: ??? (in /usr/bin/dash)
+   n1: 71 0x10EC4C: ??? (in /usr/bin/dash)
+    n1: 71 0x11F1E0: ??? (in /usr/bin/dash)
+     n1: 71 0x10DB73: ??? (in /usr/bin/dash)
+      n0: 71 0x48900B2: (below main) (libc-start.c:308)
+#-----------
+snapshot=50
+#-----------
+time=238305
+mem_heap_B=3210
+mem_heap_extra_B=422
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=51
+#-----------
+time=245575
+mem_heap_B=3888
+mem_heap_extra_B=440
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=52
+#-----------
+time=255892
+mem_heap_B=8659
+mem_heap_extra_B=461
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=53
+#-----------
+time=266297
+mem_heap_B=8659
+mem_heap_extra_B=461
+mem_stacks_B=0
+heap_tree=peak
+n4: 8659 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n4: 6948 0x116D4C: ??? (in /usr/bin/dash)
+  n1: 4771 0x113FA8: ??? (in /usr/bin/dash)
+   n1: 4771 0x1104BF: ??? (in /usr/bin/dash)
+    n1: 4771 0x10F716: ??? (in /usr/bin/dash)
+     n1: 4771 0x116B1B: ??? (in /usr/bin/dash)
+      n1: 4771 0x10DC81: ??? (in /usr/bin/dash)
+       n0: 4771 0x48900B2: (below main) (libc-start.c:308)
+  n2: 1408 0x11E4F8: ??? (in /usr/bin/dash)
+   n1: 1376 0x11F16C: ??? (in /usr/bin/dash)
+    n1: 1376 0x10DB73: ??? (in /usr/bin/dash)
+     n0: 1376 0x48900B2: (below main) (libc-start.c:308)
+   n0: 32 in 1 place, below massif's threshold (1.00%)
+  n1: 678 0x112EA4: ??? (in /usr/bin/dash)
+   n1: 678 0x113F89: ??? (in /usr/bin/dash)
+    n1: 678 0x1104BF: ??? (in /usr/bin/dash)
+     n1: 678 0x10F716: ??? (in /usr/bin/dash)
+      n1: 678 0x116B1B: ??? (in /usr/bin/dash)
+       n1: 678 0x10DC81: ??? (in /usr/bin/dash)
+        n0: 678 0x48900B2: (below main) (libc-start.c:308)
+  n0: 91 in 2 places, all below massif's threshold (1.00%)
+ n1: 1480 0x116E16: ??? (in /usr/bin/dash)
+  n2: 1480 0x117029: ??? (in /usr/bin/dash)
+   n1: 968 0x117114: ??? (in /usr/bin/dash)
+    n1: 968 0x11201E: ??? (in /usr/bin/dash)
+     n1: 968 0x113D17: ??? (in /usr/bin/dash)
+      n1: 968 0x113E9A: ??? (in /usr/bin/dash)
+       n1: 968 0x1104BF: ??? (in /usr/bin/dash)
+        n1: 968 0x10F716: ??? (in /usr/bin/dash)
+         n1: 968 0x116B1B: ??? (in /usr/bin/dash)
+          n1: 968 0x10DC81: ??? (in /usr/bin/dash)
+           n0: 968 0x48900B2: (below main) (libc-start.c:308)
+   n1: 512 0x117184: ??? (in /usr/bin/dash)
+    n1: 512 0x113996: ??? (in /usr/bin/dash)
+     n1: 512 0x113E9A: ??? (in /usr/bin/dash)
+      n1: 512 0x1104BF: ??? (in /usr/bin/dash)
+       n1: 512 0x10F716: ??? (in /usr/bin/dash)
+        n1: 512 0x116B1B: ??? (in /usr/bin/dash)
+         n1: 512 0x10DC81: ??? (in /usr/bin/dash)
+          n0: 512 0x48900B2: (below main) (libc-start.c:308)
+ n1: 160 0x116D7C: ??? (in /usr/bin/dash)
+  n1: 160 0x116094: ??? (in /usr/bin/dash)
+   n1: 160 0x110B00: ??? (in /usr/bin/dash)
+    n1: 160 0x113BDA: ??? (in /usr/bin/dash)
+     n1: 160 0x113E9A: ??? (in /usr/bin/dash)
+      n1: 160 0x1104BF: ??? (in /usr/bin/dash)
+       n1: 160 0x10F716: ??? (in /usr/bin/dash)
+        n1: 160 0x116B1B: ??? (in /usr/bin/dash)
+         n1: 160 0x10DC81: ??? (in /usr/bin/dash)
+          n0: 160 0x48900B2: (below main) (libc-start.c:308)
+ n0: 71 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=54
+#-----------
+time=266297
+mem_heap_B=3888
+mem_heap_extra_B=440
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=55
+#-----------
+time=266329
+mem_heap_B=3210
+mem_heap_extra_B=422
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=56
+#-----------
+time=277289
+mem_heap_B=3194
+mem_heap_extra_B=414
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=57
+#-----------
+time=277351
+mem_heap_B=2226
+mem_heap_extra_B=398
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=58
+#-----------
+time=277385
+mem_heap_B=1714
+mem_heap_extra_B=390
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=59
+#-----------
+time=287838
+mem_heap_B=1730
+mem_heap_extra_B=398
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=60
+#-----------
+time=290880
+mem_heap_B=1796
+mem_heap_extra_B=420
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=61
+#-----------
+time=291934
+mem_heap_B=5955
+mem_heap_extra_B=429
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=62
+#-----------
+time=292966
+mem_heap_B=1796
+mem_heap_extra_B=420
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=63
+#-----------
+time=292998
+mem_heap_B=1730
+mem_heap_extra_B=398
+mem_stacks_B=0
+heap_tree=detailed
+n4: 1730 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n3: 1499 0x116D4C: ??? (in /usr/bin/dash)
+  n2: 1408 0x11E4F8: ??? (in /usr/bin/dash)
+   n1: 1376 0x11F16C: ??? (in /usr/bin/dash)
+    n1: 1376 0x10DB73: ??? (in /usr/bin/dash)
+     n0: 1376 0x48900B2: (below main) (libc-start.c:308)
+   n1: 32 0x11F1BB: ??? (in /usr/bin/dash)
+    n1: 32 0x10DB73: ??? (in /usr/bin/dash)
+     n0: 32 0x48900B2: (below main) (libc-start.c:308)
+  n1: 75 0x11E634: ??? (in /usr/bin/dash)
+   n1: 75 0x11F1E0: ??? (in /usr/bin/dash)
+    n1: 75 0x10DB73: ??? (in /usr/bin/dash)
+     n0: 75 0x48900B2: (below main) (libc-start.c:308)
+  n0: 16 in 3 places, all below massif's threshold (1.00%)
+ n1: 160 0x116D7C: ??? (in /usr/bin/dash)
+  n1: 160 0x116094: ??? (in /usr/bin/dash)
+   n1: 160 0x110B00: ??? (in /usr/bin/dash)
+    n1: 160 0x113BDA: ??? (in /usr/bin/dash)
+     n1: 160 0x113E9A: ??? (in /usr/bin/dash)
+      n1: 160 0x1104BF: ??? (in /usr/bin/dash)
+       n1: 160 0x10F716: ??? (in /usr/bin/dash)
+        n1: 160 0x116B1B: ??? (in /usr/bin/dash)
+         n1: 160 0x10DC81: ??? (in /usr/bin/dash)
+          n0: 160 0x48900B2: (below main) (libc-start.c:308)
+ n1: 71 0x490B3BE: strdup (strdup.c:42)
+  n1: 71 0x116DAC: ??? (in /usr/bin/dash)
+   n1: 71 0x10EC4C: ??? (in /usr/bin/dash)
+    n1: 71 0x11F1E0: ??? (in /usr/bin/dash)
+     n1: 71 0x10DB73: ??? (in /usr/bin/dash)
+      n0: 71 0x48900B2: (below main) (libc-start.c:308)
+ n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=64
+#-----------
+time=295368
+mem_heap_B=2242
+mem_heap_extra_B=406
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=65
+#-----------
+time=295682
+mem_heap_B=2270
+mem_heap_extra_B=418
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=66
+#-----------
+time=296790
+mem_heap_B=2254
+mem_heap_extra_B=410
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=67
+#-----------
+time=296852
+mem_heap_B=1742
+mem_heap_extra_B=402
+mem_stacks_B=0
+heap_tree=empty
