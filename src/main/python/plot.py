@@ -387,7 +387,7 @@ def plot_two_axes(ax):
 
 
 def fit_trip_lengths():
-    data = pd.read_csv('../../../data/distances.csv', delim_whitespace=True, header=0)['Distance']
+    data = pd.read_csv('../../../output/distances.csv', delim_whitespace=True, header=0)['Distance']
     N_bins = 21
     bins = np.arange(0, N_bins)
     # data = [x for x in data if x < 25]
@@ -416,7 +416,7 @@ def fit_trip_lengths():
 if __name__ == '__main__':
     mpl.rcParams['savefig.directory'] = '/home/andreas/Documents/KUL/1e master/Big Data Analytics ' \
                                         'Programming/Project2/plots'
-    df = pd.read_csv('../../../data/distances.csv', delim_whitespace=True, header=0)
+    df = pd.read_csv('../../../output/distances.csv', delim_whitespace=True, header=0)
     # get_best_distribution(df['Distance'].to_numpy())
     fit_trip_lengths()
     # fig, ax1 = plt.subplots()

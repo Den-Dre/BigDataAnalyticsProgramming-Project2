@@ -7,6 +7,6 @@ public class Main {
         sd.calculateDistances();
 
         // Using regular implementation
-        GPSUtil.calculateDistances();
+        // GPSUtil.calculateDistances();
     }
 }

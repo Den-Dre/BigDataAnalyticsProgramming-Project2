@@ -4,7 +4,7 @@ import pandas as pd
 import seaborn as sns
 from scipy.stats import halfnorm
 
-df = pd.read_csv('../../../data/distances.csv', delim_whitespace=True)
+df = pd.read_csv('../../../output/distances.csv', delim_whitespace=True)
 print(df.head())
 minimum = min(df['Distance'])
 maximum = max(df['Distance'])

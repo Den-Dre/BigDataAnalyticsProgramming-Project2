@@ -51,7 +51,7 @@ public class SparkDistances {
      * @throws IOException: If the .trips data can't be read in
      */
     protected void calculateDistances() throws IOException {
-        JavaRDD<Row> data = readData(System.getProperty("user.dir") + "/2010_03.trips");
+        JavaRDD<Row> data = readData("/user/r0760777/input/2010_03.trips");
         long currentTime = System.currentTimeMillis();
         List<Double> distances = getDistances(data);
         writeResults(distances);
@@ -67,7 +67,7 @@ public class SparkDistances {
      *  or the distances can't be written to a file
      */
     private void writeResults(List<Double> distances) throws IOException {
-        BufferedWriter writer = new BufferedWriter(new FileWriter(System.getProperty("user.dir") + "/data/sparkDistances.csv"));
+        BufferedWriter writer = new BufferedWriter(new FileWriter("/user/r0760777/sparkOutput/sparkDistances.csv"));
         for (double d: distances) {
             writer.write(d + "\n");
         }

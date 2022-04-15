@@ -9,15 +9,15 @@ import static java.lang.Math.*;
 public class GPSUtil {
     /**
      * Calculate the distances between the endpoints of trips, defined in
-     * [project-root]/data/2010_03.trips
-     * The output is written to [project-root]/data/distances.csv
+     * [project-root]/src/2010_03.trips
+     * The output is written to [project-root]/output/distances.csv
      *
      * @throws IOException: when the data can't be read, or outputs can't be written to disk
      */
     public static void calculateDistances() throws IOException {
         String userDir = System.getProperty("user.dir");
-        BufferedReader reader = new BufferedReader(new FileReader(userDir + "/data/2010_03.trips"));
-        BufferedWriter writer = new BufferedWriter(new FileWriter(userDir + "/data/distances.csv", false));
+        BufferedReader reader = new BufferedReader(new FileReader(userDir + "/src/2010_03.trips"));
+        BufferedWriter writer = new BufferedWriter(new FileWriter("./distances.csv", false));
         String currentLine;
         writer.write("TaxiID Distance\n");
         long startTime = System.currentTimeMillis();
