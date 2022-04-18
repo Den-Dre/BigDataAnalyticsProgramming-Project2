@@ -15,6 +15,10 @@ import seaborn as sns
 # # plt.xticks(rotation=45, ha='right')
 # plt.show()
 
+def get_seconds(string):
+    parts = string[:-1].split('m')
+    return float(parts[0]) * 60 + float(parts[1])
+
 
 def plot_reduce_execution_times(ax, x=None, color='blue'):
     # Without the in sea check:
@@ -32,7 +36,7 @@ def plot_reduce_execution_times(ax, x=None, color='blue'):
         6: '11m44.482s',
         7: '11m14.024s',
         8: '10m35.168s',
-        9: '10m49.846s',
+        # 9: '10m49.846s',
         10: '11m32.824s',
         11: '11m27.221s',
         12: '11m30.318s',
@@ -59,27 +63,57 @@ def plot_reduce_execution_times(ax, x=None, color='blue'):
         34: '11m59.390s',
         35: '11m57.720s',
     }
-    for key, time in reduce_execution_times.items():
-        if time.index('m') == 1:
-            reduce_execution_times[key] = (float(time[0]) * 60 + float(time[2:4]) + float(time[5:-1]) / 1000) / 60
-        else:
-            reduce_execution_times[key] = (float(time[0:2]) * 60 + float(time[3:5]) + float(time[6:-1]) / 1000) / 60
-    red_ordered_times = dict(sorted(reduce_execution_times.items()))
-    red_ordered_times.pop(9)
+
+    custom_reduce_execution_times = {
+        5:	'11m15s',
+        6:	'11m17s',
+        7:	'10m44s',
+        8:	'10m9s',
+        10:	'11m5s',
+        11:	'10m56s',
+        12:	'11m2s',
+        13:	'10m26s',
+        14:	'10m39s',
+        15:	'10m27s',
+        16:	'10m27s',
+        17:	'10m20s',
+        18:	'10m33s',
+        19:	'10m10s',
+        20:	'10m21s',
+        21:	'10m26s',
+        22:	'10m16s',
+        23:	'10m32s',
+        24:	'10m19s',
+        25:	'10m33s',
+        26:	'10m20s',
+        28:	'12m52s',
+        29:	'12m48s',
+        30:	'13m48s',
+        31:	'13m30s',
+        32:	'12m42s',
+        33:	'11m49s',
+        34:	'11m40s',
+        35:	'11m40s',
+    }
+
+    for key, time in custom_reduce_execution_times.items():
+        custom_reduce_execution_times[key] = get_seconds(time) / 60
+    red_ordered_times = dict(sorted(custom_reduce_execution_times.items()))
+    # red_ordered_times.pop(9)
     # ax.set_title('Execution time in function of number of reducers')
     ax.set_xlabel('Number of reducers')
     ax.set_ylabel('Execution time (minutes)', color=color)
     ax.tick_params(axis='y', color=color)
-    print(min(red_ordered_times, key=red_ordered_times.get))
+    # print(min(red_ordered_times, key=red_ordered_times.get))
     if x is None:
         x = red_ordered_times.keys()
-    ax.plot(list(x)[:30 - 10], list(red_ordered_times.values())[:30 - 10],
+    ax.plot(x, red_ordered_times.values(),  # list(x)[:30 - 10], list(red_ordered_times.values())[:30 - 10],
             # markevery=[min(red_ordered_times, key=red_ordered_times.get)], marker="o",
-            markevery=[list(red_ordered_times.values()).index(min(red_ordered_times.values()))], marker="o",
+            # markevery=[list(red_ordered_times.values()).index(min(red_ordered_times.values()))], marker="o",
             markerfacecolor='green', label='Execution time', color=color)
 
 
-def plot_map_execution_times(ax, x, color):
+def plot_map_execution_times(ax, x=None, color='blue'):
     map_execution_times = {
         1073741824: '12m20.095s',
         134217728: '12m32.617s',
@@ -106,28 +140,51 @@ def plot_map_execution_times(ax, x, color):
         17179869184: '23m29.812s',
     }
 
+    custom_execution_times = {
+        # 131072:	'8m49s',
+        # 262144:	'8m39s',
+        # 524288:	'8m38s',
+        # 1048576:	'8m45s',
+        # 2097152:	'8m41s',
+        4194304:	'8m37s',
+        8388608:	'8m41s',
+        16777216:	'8m35s',
+        33554432:	'8m46s',
+        67108864:	'8m39s',
+        134217728:	'8m38s',
+        268435456:	'7m30s',
+        536870912:	'6m51s',
+        1073741824:	'9m3s',
+        2147483648:	'9m10s',
+        4294967296:	'9m3s',
+        8589934592:	'9m17s',
+        17179869184: '9m52s',
+    }
+
     new_map_execution_times = {}
-    for key, time in map_execution_times.items():
+    for key, time in custom_execution_times.items():
         new_key = int(float(key) / (1024 * 1024))
-        time_seconds = float(time[0:2]) * 60 + float(time[3:5]) + float(time[6:-1]) / 1000
+        time_seconds = get_seconds(time)
         new_map_execution_times[new_key] = time_seconds / 60
     map_ordered_times = dict(sorted(new_map_execution_times.items()))
     print(map_ordered_times)
 
     # ax.set_title('Execution time in function of number of reducers')
-    ax.set_xlabel('Split size (bytes)')
+    ax.set_xlabel('Split size (Mb)')
     ax.set_ylabel('Execution time (minutes)', color=color)
     # plt.xticks(list(map_ordered_times.keys()), rotation=30, ha='right')
     # plt.xticks(np.arange(0, max(map_ordered_times.keys()), 256))
+    if x is None:
+        x = map_ordered_times.keys()
     ax.semilogx(x, map_ordered_times.values(),
                 # markevery=[19],
                 # marker="o", markerfacecolor='red',
                 label='Execution time', color=color)
     x_ticks = list(map_ordered_times.keys())
-    x_ticks.remove(16)
-    x_ticks.remove(8)
-    x_ticks.remove(64)
-    ax.set_xticks(x_ticks)
+    # x_ticks.remove(16)
+    # x_ticks.remove(8)
+    # x_ticks.remove(64)
+    # ax.set_xticks(x_ticks)
     # ax.legend()
 
 
@@ -136,8 +193,8 @@ def plot_trip_revenue_per_month(ax):
     print('Total revenue: ' + str(sum(df['Revenue'])))
     ax.set_title('Revenue per month')
     ax.set_xlabel('Date (per month)')
-    ax.set_ylabel('Revenue (in millions)')
-    ax.set_xticks(rotation=90)
+    ax.set_ylabel('Revenue (in million dollars)')
+    plt.xticks(rotation=90)
     short_dates = ['\'' + date[2:] for date in df['Date']]  # Short notation for the years
     ax.bar(short_dates, df['Revenue'])
     # df.plot(x='Date', y='Revenue', kind='bar')
@@ -296,32 +353,34 @@ def plot_peak_memory(ax, x, color='blue'):
     ]
 
     nbmappers_map_physical_memory = [
-        598593536,
-        599887872,
-        606707712,
-        615731200,
-        623325184,
-        622313472,
-        654389248,
-        630198272,
-        616026112,
-        546385920,
-        646807552,
-        535347200,
+        670699520,
+        650543104,
+        687214592,
+        680013824,
+        616615936,
+        651907072,
+        617185280,
+        647884800,
+        633999360,
+        623022080,
+        623144960,
+        650866688,
+        623611904,
     ]
     nbmappers_map_virtual_memory = [
-        2567708672,
-        2571104256,
-        2566832128,
-        2568839168,
-        2582888448,
-        2580979712,
-        2597654528,
-        2575994880,
-        2580439040,
-        2592059392,
-        2572517376,
-        2580570112,
+        2596212736,
+        2563915776,
+        2608807936,
+        2598154240,
+        2563682304,
+        2568544256,
+        2568192000,
+        2607198208,
+        2590703616,
+        2583040000,
+        2585755648,
+        2578366464,
+        2567823360,
     ]
     nbmappers_reduce_physical_memory = [
         1025884160,
@@ -352,10 +411,10 @@ def plot_peak_memory(ax, x, color='blue'):
         2582777856,
     ]
 
-    data = nbreducers_reduce_physical_memory
-    ax.set_ylabel('Peak Reduce physical memory usage (bytes)', color=color)
+    data = nbmappers_map_physical_memory
+    ax.set_ylabel('Peak Map physical memory usage (bytes)', color=color)
     ax.tick_params(axis='y', color=color)
-    ax.plot(x, data[:19], label='Peak Reduce physical memory usage (bytes)', color=color,
+    ax.plot(x, data, label='Peak Reduce physical memory usage (bytes)', color=color,
             # markevery=[data.index(min(data))]
             )
     # ax.set_xticks(list(plt.xticks()[0]) + [8, 19, 29])
@@ -365,25 +424,27 @@ def plot_peak_memory(ax, x, color='blue'):
 
 
 def plot_two_axes(ax):
-    nb_reduces_xs = np.arange(5, 24)
-    # splitSizes_xs = [
-    #     8388608,
-    #     16777216,
-    #     33554432,
-    #     67108864,
-    #     134217728,
-    #     268435456,
-    #     536870912,
-    #     1073741824,
-    #     2147483648,
-    #     4294967296,
-    #     8589934592,
-    #     17179869184,
-    # ]
+    # nb_reduces_xs = [i for i in range(5, 36) if i not in [9, 27]]
+    splitSizes_xs = [
+        4194304,
+        8388608,
+        16777216,
+        33554432,
+        67108864,
+        134217728,
+        268435456,
+        536870912,
+        1073741824,
+        2147483648,
+        4294967296,
+        8589934592,
+        17179869184,
+    ]
+    splitSizes_xs = [x / 1024**2 for x in splitSizes_xs]
     # xs = np.delete(xs, 9 - 5)
-    plot_reduce_execution_times(ax)
+    plot_map_execution_times(ax, splitSizes_xs)
     ax2 = ax.twinx()
-    plot_peak_memory(ax2, nb_reduces_xs, 'red')
+    plot_peak_memory(ax2, splitSizes_xs, 'red')
 
 
 def fit_trip_lengths():
@@ -416,10 +477,11 @@ def fit_trip_lengths():
 if __name__ == '__main__':
     mpl.rcParams['savefig.directory'] = '/home/andreas/Documents/KUL/1e master/Big Data Analytics ' \
                                         'Programming/Project2/plots'
-    df = pd.read_csv('../../../output/distances.csv', delim_whitespace=True, header=0)
-    # get_best_distribution(df['Distance'].to_numpy())
-    fit_trip_lengths()
-    # fig, ax1 = plt.subplots()
-    # plot_two_axes(ax1)
-    # plt.title('Execution time & memory usage in function of #reduces')
+    # df = pd.read_csv('../../../output/distances.csv', delim_whitespace=True, header=0)
+    fig, ax1 = plt.subplots()
+    # plot_reduce_execution_times(ax1, None, 'blue')  # works
+    # plot_map_execution_times(ax1)
+    plot_two_axes(ax1)  # works
+    # plot_trip_revenue_per_month(ax1)
+    plt.title('Map execution time & memory usage as a function of splitSize')
     plt.show()
