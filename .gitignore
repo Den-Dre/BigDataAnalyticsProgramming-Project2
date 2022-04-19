@@ -41,3 +41,6 @@ jars/
 
 # Ignore process files
 .nfs*
+
+# Ignore plotting data
+/src/main/python/data/
