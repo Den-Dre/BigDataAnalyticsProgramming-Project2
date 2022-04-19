@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <idinfo>
+    <citation>
+      <citeinfo>
+        <origin/>
+        <origin/>
+        <origin/>
+        <origin/>
+        <pubdate>20110501</pubdate>
+        <title>Major and Minor Roads: San Francisco Bay Area, California, 2011</title>
+        <geoform>vector digital data</geoform>
+        <pubinfo>
+          <pubplace/>
+          <publish>Bay Area Open Space Council</publish>
+        </pubinfo>
+        <onlink>http://purl.stanford.edu/rf409zy3497</onlink>
+        <lworkcit>
+          <citeinfo>
+            <pubdate>20110101</pubdate>
+            <title>The Conservation Lands Network regional biodiversity GIS database</title>
+          </citeinfo>
+        </lworkcit>
+      </citeinfo>
+    </citation>
+    <descript>
+      <abstract>This polyline shapefile depicts most major and minor roads in the nine county San Francisco Bay Area Region, California. These data were created from a variety of sources developed over the years, including data from ESRI, the California Department of Transportation, the United States Census Bureau Topologically Integrated Geographic Encoding and Referencing (TIGER/Line) and counties. It is not meant to be precisely accurate and is primarily used for cartography purposes.</abstract>
+      <purpose>This dataset was developed/compiled for use in the San Francisco Bay Area Upland Habitat Goals Project, a Project used to identify a Conservation Lands Network (CLN) for biodiversity preservation to inform conservation investments and lasting cooperative conservation partnerships. The Conservation Lands Network GIS Database is the primary output of the Project. The data depicts the spatially explicit CLN that is recommended for the nine county San Francisco Bay Area Region, California.</purpose>
+    </descript>
+    <timeperd>
+      <timeinfo>
+        <sngdate>
+          <caldate>20110501</caldate>
+        </sngdate>
+      </timeinfo>
+      <current>publication date</current>
+    </timeperd>
+    <status>
+      <progress>Complete</progress>
+      <update>As needed</update>
+    </status>
+    <spdom>
+      <bounding>
+        <westbc>-123.527630</westbc>
+        <eastbc>-121.206705</eastbc>
+        <northbc>38.885661</northbc>
+        <southbc>36.855672</southbc>
+      </bounding>
+    </spdom>
+    <keywords>
+      <theme>
+        <themekt>lcsh</themekt>
+        <themekey>Roads</themekey>
+        <themekey>Streets</themekey>
+      </theme>
+      <theme>
+        <themekt>ISO 19115 Topic Categories</themekt>
+        <themekey>transportation</themekey>
+      </theme>
+      <place>
+        <placekt>geonames</placekt>
+        <placekey>San Francisco Bay Area (Calif.)</placekey>
+        <placekey>Alameda County (Calif.)</placekey>
+        <placekey>Contra Costa County (Calif.)</placekey>
+        <placekey>Marin County (Calif.)</placekey>
+        <placekey>Napa County (Calif.)</placekey>
+        <placekey>San Francisco County (Calif.)</placekey>
+        <placekey>San Mateo County (Calif.)</placekey>
+        <placekey>Santa Clara County (Calif.)</placekey>
+        <placekey>Solano County (Calif.)</placekey>
+        <placekey>Sonoma County (Calif.)</placekey>
+      </place>
+    </keywords>
+    <accconst>These data are distributed under a GNU General Public License (GPL)</accconst>
+    <useconst>None</useconst>
+    <ptcontac>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>Bay Area Open Space Council</cntorg>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>physical</addrtype>
+          <address>2150 Allston Wy., Ste. 320</address>
+          <city>Berkeley</city>
+          <state>California</state>
+          <postal>94704</postal>
+          <country>US</country>
+        </cntaddr>
+        <cntvoice>510-809-8009</cntvoice>
+        <cntemail>info@openspacecouncil.org</cntemail>
+      </cntinfo>
+    </ptcontac>
+    <datacred>Bay Area Open Space Council, GreenInfo Network, Conservation Lands Network, and San Francisco Bay Area Upland Habitat Goals Project. (2011). Major and Minor Roads: San Francisco Bay Area, California, 2011. Bay Area Open Space Council. Available at http://purl.stanford.edu/rf409zy3497.</datacred>
+    <native>Microsoft Windows 7 Version 6.1 (Build 7601) Service Pack 1; Esri ArcGIS 10.3.1.4959</native>
+  </idinfo>
+  <dataqual>
+    <complete>Complete</complete>
+  </dataqual>
+  <spdoinfo>
+    <direct>Vector</direct>
+    <ptvctinf>
+      <sdtsterm>
+        <sdtstype>String</sdtstype>
+        <ptvctcnt>287031</ptvctcnt>
+      </sdtsterm>
+    </ptvctinf>
+  </spdoinfo>
+  <eainfo>
+    <detailed>
+      <enttyp>
+        <enttypl>ba_streets</enttypl>
+      </enttyp>
+      <attr>
+        <attrlabl>FID</attrlabl>
+        <attrdef>Internal feature number.</attrdef>
+        <attrdefs>ESRI</attrdefs>
+        <attrdomv>
+          <udom>Sequential unique whole numbers that are automatically generated.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Shape</attrlabl>
+        <attrdef>Feature geometry.</attrdef>
+        <attrdefs>ESRI</attrdefs>
+        <attrdomv>
+          <udom>Coordinates defining the features.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>FNODE_</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>TNODE_</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>LPOLY_</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>RPOLY_</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>LENGTH</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>CA_STREETS</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>CA_STREE_1</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>L_F_ADD</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>L_T_ADD</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>R_F_ADD</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>R_T_ADD</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>PREFIX</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>PRE_TYPE</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>NAME</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>TYPE</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>SUFFIX</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>ZIPL</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>ZIPR</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>CITYL</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>CITYR</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>STATE_ABBR</attrlabl>
+      </attr>
+      <attr>
+        <attrlabl>CFCC</attrlabl>
+      </attr>
+    </detailed>
+  </eainfo>
+  <distinfo>
+    <distrib>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>Stanford Geospatial Center</cntorg>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>physical</addrtype>
+          <address>Branner Earth Sciences Library</address>
+          <address>Mitchell Building, 2nd Floor</address>
+          <address>397 Panama Mall</address>
+          <city>Stanford</city>
+          <state>California</state>
+          <postal>94305</postal>
+        </cntaddr>
+        <cntvoice>650-723-2746</cntvoice>
+        <cntemail>brannerlibrary@stanford.edu</cntemail>
+      </cntinfo>
+    </distrib>
+    <distliab>See access and use constraints information.</distliab>
+  </distinfo>
+  <metainfo>
+    <metd>20161107</metd>
+    <metc>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>Stanford Geospatial Center</cntorg>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>Mitchell Bldg. 2nd floor</address>
+          <address>397 Panama Mall</address>
+          <city>Stanford</city>
+          <state>California</state>
+          <postal>94305</postal>
+          <country>US</country>
+        </cntaddr>
+        <cntvoice>650-723-2746</cntvoice>
+        <cntemail>brannerlibrary@stanford.edu</cntemail>
+      </cntinfo>
+    </metc>
+    <metstdn>FGDC Content Standard for Digital Geospatial Metadata</metstdn>
+    <metstdv>FGDC-STD-001-1998</metstdv>
+    <mettc>local time</mettc>
+  </metainfo>
+</metadata>
