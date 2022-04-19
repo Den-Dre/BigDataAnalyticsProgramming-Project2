@@ -1,0 +1,2 @@
+2022-04-18 18:56:51,728 INFO TripReconstructor: Number of reducers: 8
+2022-04-18 18:56:52,099 INFO client.DefaultNoHARMFailoverProxyProvider: Connecting to ResourceManager at /10.33.14.137:8132
