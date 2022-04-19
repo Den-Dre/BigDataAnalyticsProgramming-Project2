@@ -51,10 +51,10 @@ public class SparkDistances {
      * @throws IOException: If the .trips data can't be read in
      */
     protected void calculateDistances() throws IOException {
-        JavaRDD<Row> data = readData("src/2010_03.trips");
+        JavaRDD<Row> data = readData("/user/r0760777/input/2010_03.trips");
         long currentTime = System.currentTimeMillis();
-        List<Double> distances = getDistances(data);
-        writeResults(distances);
+        saveDistances(data);
+//        writeResults(distances);
         System.out.println("Spark took: " + (System.currentTimeMillis() - currentTime));
         jsc.stop();
     }
@@ -90,12 +90,12 @@ public class SparkDistances {
     /**
      * Calculate the distances of the data in a given {@link JavaRDD<Row>} using
      * a flat surface earth formula. The formula is applied to the data using
-     * a Spark transformation.
+     * a Spark transformation. When an invalid record is encountered, its distance
+     * is set to -1.
      *
      * @param data: the data of which the distances are to be calculated
-     * @return distances: a list containing the calculated distances
      */
-    private static List<Double> getDistances(JavaRDD<Row> data) {
+    private static void saveDistances(JavaRDD<Row> data) {
         JavaRDD<Double> mapping = data.map((Function<Row, Double>) row -> {
                     try {
                         return GPSUtil.sphericalEarthDistance(
@@ -108,7 +108,7 @@ public class SparkDistances {
                         return -1.0;
                     }
                 }
-        );
-        return mapping.collect();
+        ).filter((Function<Double, Boolean>) distance -> distance > 0);
+        mapping.saveAsTextFile("sparkDistances");
     }
 }
